@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { StyleSheet, Text, View, TextInput, Pressable, Platform, Animated, ActivityIndicator, Alert, Image } from 'react-native';
+import { StyleSheet, Text, View, TextInput, Pressable, Platform, Animated, ActivityIndicator, Alert, Image, SafeAreaView, StatusBar } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { collection, query, where, getDocs, doc, setDoc, getDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
@@ -13,23 +13,34 @@ export default function AuthScreen({ navigation }) {
   const [successUser, setSuccessUser] = useState(null);
   const [generatedPin, setGeneratedPin] = useState(null);
   const [isSuccess, setIsSuccess] = useState(false);
-
+  
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
 
   useEffect(() => {
     const useNative = Platform.OS !== 'web';
     fadeAnim.setValue(0);
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 600,
-      useNativeDriver: useNative,
-    }).start();
+    slideAnim.setValue(30);
+    
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: useNative,
+      }),
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        friction: 8,
+        tension: 40,
+        useNativeDriver: useNative,
+      })
+    ]).start();
   }, [mode, isSuccess]);
 
   const handleAuth = async () => {
     if (mode === 'REGISTER' && !name.trim()) return;
     if (mode === 'LOGIN' && !pin.trim()) return;
-
+    
     setLoading(true);
 
     try {
@@ -47,7 +58,7 @@ export default function AuthScreen({ navigation }) {
         const userData = querySnapshot.docs[0].data();
         await AsyncStorage.setItem('user_name', userData.name);
         await AsyncStorage.setItem('user_pin', userData.pin);
-
+        
         setSuccessUser(userData.name);
         setIsSuccess(true);
       } else {
@@ -103,11 +114,10 @@ export default function AuthScreen({ navigation }) {
     </View>
   );
 
-  if (isSuccess) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.verticalSpine} />
-        <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
+  const MainContent = () => {
+    if (isSuccess) {
+      return (
+        <Animated.View style={[styles.content, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
           <View style={styles.topSection}>
             <View style={styles.logoWrapSuccess}>
               <Image source={require('../assets/icon.png')} style={styles.logo} />
@@ -122,7 +132,7 @@ export default function AuthScreen({ navigation }) {
             </Text>
             <View style={styles.revealBar} />
           </View>
-
+          
           {generatedPin ? (
             <View style={styles.pinDisplay}>
               <Text style={styles.pinLabel}>YOUR SECURITY PIN</Text>
@@ -137,8 +147,8 @@ export default function AuthScreen({ navigation }) {
           )}
 
           <View style={styles.bottomSection}>
-            <Pressable
-              style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
+            <Pressable 
+              style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]} 
               onPress={() => navigation.replace('Dashboard')}
             >
               <View style={styles.buttonContent}>
@@ -147,13 +157,10 @@ export default function AuthScreen({ navigation }) {
             </Pressable>
           </View>
         </Animated.View>
-      </View>
-    );
-  }
+      );
+    }
 
-  return (
-    <View style={styles.container}>
-      <View style={styles.verticalSpine} />
+    return (
       <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
         <View style={styles.topSection}>
           <View style={styles.modeToggle}>
@@ -206,8 +213,8 @@ export default function AuthScreen({ navigation }) {
         </View>
 
         <View style={styles.bottomSection}>
-          <Pressable
-            style={({ pressed }) => [styles.button, pressed && styles.buttonPressed, (mode === 'REGISTER' ? !name.trim() : !pin.trim()) && styles.buttonDisabled]}
+          <Pressable 
+            style={({ pressed }) => [styles.button, pressed && styles.buttonPressed, (mode === 'REGISTER' ? !name.trim() : !pin.trim()) && styles.buttonDisabled]} 
             onPress={handleAuth}
             disabled={loading || (mode === 'REGISTER' ? !name.trim() : !pin.trim())}
           >
@@ -221,26 +228,37 @@ export default function AuthScreen({ navigation }) {
           </Pressable>
         </View>
       </Animated.View>
+    );
+  };
+
+  return (
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" />
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.verticalSpine} />
+        <MainContent />
+      </SafeAreaView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white },
+  safeArea: { flex: 1 },
   verticalSpine: { position: 'absolute', left: spacing.xl + normalize(4), top: 0, bottom: 0, width: 1, backgroundColor: '#F3F4F6' },
-  content: { flex: 1, padding: spacing.xl, justifyContent: 'space-between', paddingVertical: window.height * 0.08, ...layout.container },
+  content: { flex: 1, padding: spacing.xl, justifyContent: 'space-between', paddingVertical: window.height * 0.05, ...layout.container },
   topSection: { alignItems: 'flex-start' },
   modeToggle: { flexDirection: 'row', backgroundColor: '#F9FAFB', borderRadius: radius.full, padding: 4, marginBottom: spacing.xxl },
   modeBtn: { paddingVertical: 8, paddingHorizontal: 20, borderRadius: radius.full },
   modeBtnActive: { backgroundColor: colors.text },
   modeText: { fontSize: normalize(10), fontWeight: '900', color: '#9CA3AF', letterSpacing: 1 },
   modeTextActive: { color: colors.white },
-  logoWrap: {
-    width: normalize(60),
-    height: normalize(60),
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    marginBottom: spacing.md,
+  logoWrap: { 
+    width: normalize(60), 
+    height: normalize(60), 
+    backgroundColor: '#fff', 
+    borderRadius: 8, 
+    marginBottom: spacing.md, 
     padding: 8,
     ...Platform.select({
       web: { boxShadow: '0 2px 4px rgba(0,0,0,0.1)' },
@@ -269,12 +287,12 @@ const styles = StyleSheet.create({
   pinValue: { fontSize: normalize(80), fontWeight: '900', color: colors.text, letterSpacing: 8 },
   pinNote: { fontSize: normalize(12), color: '#9CA3AF', fontWeight: '700', lineHeight: 18, marginTop: spacing.xl, maxWidth: '80%' },
   bottomSection: { alignItems: 'flex-start' },
-  button: {
-    backgroundColor: colors.text,
-    paddingVertical: normalize(22),
-    paddingHorizontal: normalize(32),
-    borderRadius: radius.xs,
-    width: '100%',
+  button: { 
+    backgroundColor: colors.text, 
+    paddingVertical: normalize(22), 
+    paddingHorizontal: normalize(32), 
+    borderRadius: radius.xs, 
+    width: '100%', 
     alignItems: 'center',
     ...Platform.select({ web: { outlineStyle: 'none', cursor: 'pointer' } })
   },

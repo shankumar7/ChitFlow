@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { StyleSheet, Text, View, Pressable, Platform, Animated, Image } from 'react-native';
+import { StyleSheet, Text, View, Pressable, Platform, Animated, Image, SafeAreaView, StatusBar } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors, spacing, radius, normalize, window, layout } from '../utils/theme';
 
@@ -8,6 +8,7 @@ export default function WelcomeScreen({ navigation }) {
   const lineWidth = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    // Standardize to JS to avoid bridge conflicts with width
     Animated.timing(fadeAnim, {
       toValue: 1,
       duration: 1000,
@@ -17,7 +18,7 @@ export default function WelcomeScreen({ navigation }) {
     Animated.timing(lineWidth, {
       toValue: 1,
       duration: 1500,
-      useNativeDriver: false, // width cannot be animated natively
+      useNativeDriver: false,
     }).start();
   }, [fadeAnim, lineWidth]);
 
@@ -28,44 +29,48 @@ export default function WelcomeScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.verticalSpine} />
-      
-      <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
-        <View style={styles.topSection}>
-          <View style={styles.logoWrap}>
-            <Image source={require('../assets/icon.png')} style={styles.logo} />
+      <StatusBar barStyle="dark-content" />
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.verticalSpine} />
+        
+        <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
+          <View style={styles.topSection}>
+            <View style={styles.logoWrap}>
+              <Image source={require('../assets/icon.png')} style={styles.logo} />
+            </View>
+            <Text style={styles.version}>VERSION 1.0.2</Text>
+            <View style={styles.brandContainer}>
+              <Text style={styles.titleHeavy}>Chit</Text>
+              <Text style={styles.titleLight}>Flow</Text>
+            </View>
           </View>
-          <Text style={styles.version}>VERSION 1.0</Text>
-          <View style={styles.brandContainer}>
-            <Text style={styles.titleHeavy}>Chit</Text>
-            <Text style={styles.titleLight}>Flow</Text>
-          </View>
-        </View>
 
-        <View style={styles.bottomSection}>
-          <View style={styles.actionWrap}>
-            <Pressable 
-              style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
-              onPress={() => navigation.navigate('Register')}
-            >
-              <View style={styles.buttonRow}>
-                <Text style={styles.buttonText}>START YOUR FLOW</Text>
-                <MaterialCommunityIcons name="arrow-right" size={24} color={colors.text} />
-              </View>
-            </Pressable>
-            <Animated.View style={[styles.accentLine, { width: animatedLineWidth }]} />
+          <View style={styles.bottomSection}>
+            <View style={styles.actionWrap}>
+              <Pressable 
+                style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
+                onPress={() => navigation.navigate('Register')}
+              >
+                <View style={styles.buttonRow}>
+                  <Text style={styles.buttonText}>START YOUR FLOW</Text>
+                  <MaterialCommunityIcons name="arrow-right" size={24} color={colors.text} />
+                </View>
+              </Pressable>
+              <Animated.View style={[styles.accentLine, { width: animatedLineWidth }]} />
+            </View>
+            <Text style={styles.location}>Reva • 2026</Text>
           </View>
-          <Text style={styles.location}>Reva • 2026</Text>
-        </View>
-      </Animated.View>
+        </Animated.View>
+      </SafeAreaView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white },
+  safeArea: { flex: 1 },
   verticalSpine: { position: 'absolute', left: spacing.xl + normalize(4), top: 0, bottom: 0, width: 1, backgroundColor: '#F3F4F6' },
-  content: { flex: 1, padding: spacing.xl, justifyContent: 'space-between', paddingVertical: window.height * 0.1, ...layout.container },
+  content: { flex: 1, padding: spacing.xl, justifyContent: 'space-between', paddingVertical: window.height * 0.05, ...layout.container },
   logoWrap: { 
     width: normalize(80), 
     height: normalize(80), 
