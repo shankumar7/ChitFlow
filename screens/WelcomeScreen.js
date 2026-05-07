@@ -57,7 +57,7 @@ export default function WelcomeScreen({ navigation }) {
                 styles.button,
                 pressed && styles.buttonPressed
               ]}
-              onPress={() => navigation.replace('Dashboard')}
+              onPress={() => navigation.navigate('Register')}
             >
               <View style={styles.buttonRow}>
                 <Text style={styles.buttonText}>Start Your Flow</Text>
