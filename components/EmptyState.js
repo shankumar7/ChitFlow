@@ -6,7 +6,7 @@ export default function EmptyState({ title, subtitle, icon = 'layers-off-outline
   return (
     <View style={styles.container}>
       <View style={styles.iconCircle}>
-        <MaterialCommunityIcons name={icon} size={normalize(40)} color={colors.textLight} />
+        <MaterialCommunityIcons name={icon} size={normalize(32)} color={colors.text} />
       </View>
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.subtitle}>{subtitle}</Text>
@@ -18,29 +18,34 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
     justifyContent: 'center',
-    padding: spacing.xxl,
-    marginTop: spacing.xxl,
+    padding: spacing.xl,
+    marginTop: spacing.md,
   },
   iconCircle: {
-    width: normalize(80),
-    height: normalize(80),
-    borderRadius: normalize(40),
-    backgroundColor: colors.surfaceAlt,
+    width: normalize(64),
+    height: normalize(64),
+    borderRadius: normalize(8),
+    backgroundColor: '#F9FAFB',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
   },
   title: {
-    fontSize: normalize(18),
-    fontWeight: '800',
+    fontSize: normalize(14),
+    fontWeight: '900',
     color: colors.text,
     textAlign: 'center',
-    marginBottom: spacing.xs,
+    marginBottom: 4,
+    letterSpacing: 2,
   },
   subtitle: {
-    fontSize: normalize(14),
-    color: colors.textMuted,
+    fontSize: normalize(11),
+    color: '#9CA3AF',
     textAlign: 'center',
-    lineHeight: normalize(20),
+    lineHeight: normalize(16),
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
 });

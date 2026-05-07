@@ -13,6 +13,7 @@ import { colors } from './utils/theme';
 import WelcomeScreen from './screens/WelcomeScreen';
 import RegisterScreen from './screens/RegisterScreen';
 import DashboardScreen from './screens/DashboardScreen';
+import ProfileScreen from './screens/ProfileScreen';
 import GroupListScreen from './screens/GroupListScreen';
 import CreateGroupScreen from './screens/CreateGroupScreen';
 import MemberListScreen from './screens/MemberListScreen';
@@ -78,6 +79,7 @@ export default function App() {
           <Stack.Screen name="Welcome" component={WelcomeScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Register" component={RegisterScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Dashboard" component={DashboardScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="Profile" component={ProfileScreen} options={{ headerShown: false }} />
           <Stack.Screen name="GroupList" component={GroupListScreen} options={{ title: 'CHIT GROUPS' }} />
           <Stack.Screen name="CreateGroup" component={CreateGroupScreen} options={{ title: 'NEW GROUP' }} />
           <Stack.Screen name="MemberList" component={MemberListScreen} options={{ title: 'MEMBERS' }} />

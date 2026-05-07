@@ -1,12 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { StyleSheet, Text, View, TextInput, Pressable, Platform, Animated, ActivityIndicator } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { StyleSheet, Text, View, TextInput, Pressable, Platform, Animated, ActivityIndicator, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { colors, spacing, radius, normalize, window, layout } from '../utils/theme';
 
-export default function RegisterScreen({ navigation }) {
+export default function AuthScreen({ navigation }) {
+  const [mode, setMode] = useState('REGISTER'); // 'REGISTER' or 'LOGIN'
   const [name, setName] = useState('');
   const [pin, setPin] = useState('');
   const [loading, setLoading] = useState(false);
@@ -17,47 +17,76 @@ export default function RegisterScreen({ navigation }) {
 
   useEffect(() => {
     const useNative = Platform.OS !== 'web';
+    fadeAnim.setValue(0);
     Animated.timing(fadeAnim, {
       toValue: 1,
-      duration: 800,
+      duration: 600,
       useNativeDriver: useNative,
     }).start();
-  }, [fadeAnim, isSuccess]);
+  }, [mode, isSuccess]);
 
-  const handleRegister = async () => {
+  const handleAuth = async () => {
     if (!name.trim()) return;
-    
-    let finalPin = pin.trim();
-    const wasRandom = !finalPin;
-    if (wasRandom) {
-      finalPin = Math.floor(1000 + Math.random() * 9000).toString();
-    }
-
     setLoading(true);
 
     try {
       const userRef = doc(db, 'users', name.trim().toLowerCase());
-      await setDoc(userRef, {
-        name: name.trim(),
-        pin: finalPin,
-        createdAt: new Date().toISOString(),
-        groups: [],
-        teams: [],
-      });
+      const userSnap = await getDoc(userRef);
 
-      await AsyncStorage.setItem('user_name', name.trim());
-      await AsyncStorage.setItem('user_pin', finalPin);
+      if (mode === 'LOGIN') {
+        if (!userSnap.exists()) {
+          Alert.alert("Account Not Found", "This name is not registered. Please switch to Register.");
+          setLoading(false);
+          return;
+        }
 
-      if (wasRandom) {
-        setGeneratedPin(finalPin);
-        setIsSuccess(true);
-        fadeAnim.setValue(0);
+        const userData = userSnap.data();
+        if (userData.pin === pin.trim()) {
+          await AsyncStorage.setItem('user_name', name.trim());
+          await AsyncStorage.setItem('user_pin', pin.trim());
+          navigation.replace('Dashboard');
+        } else {
+          Alert.alert("Invalid PIN", "The PIN you entered is incorrect.");
+        }
       } else {
-        navigation.replace('Dashboard');
+        // REGISTER MODE
+        if (userSnap.exists()) {
+          Alert.alert("Already Exists", "This name is already taken. Please try logging in.");
+          setLoading(false);
+          return;
+        }
+
+        let finalPin = pin.trim();
+        const wasRandom = !finalPin;
+        if (wasRandom) {
+          finalPin = Math.floor(1000 + Math.random() * 9000).toString();
+        } else if (finalPin.length !== 4) {
+          Alert.alert("Invalid PIN", "Please provide a 4-digit PIN or leave it blank.");
+          setLoading(false);
+          return;
+        }
+
+        await setDoc(userRef, {
+          name: name.trim(),
+          pin: finalPin,
+          createdAt: new Date().toISOString(),
+          groups: [],
+          teams: [],
+        });
+
+        await AsyncStorage.setItem('user_name', name.trim());
+        await AsyncStorage.setItem('user_pin', finalPin);
+
+        if (wasRandom) {
+          setGeneratedPin(finalPin);
+          setIsSuccess(true);
+        } else {
+          navigation.replace('Dashboard');
+        }
       }
     } catch (error) {
-      console.error("Registration error:", error);
-      alert("Failed to create profile. Please try again.");
+      console.error("Auth error:", error);
+      Alert.alert("Error", "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -72,21 +101,15 @@ export default function RegisterScreen({ navigation }) {
             <Text style={styles.step}>SUCCESS</Text>
             <Text style={styles.title}>Welcome,{"\n"}{name}</Text>
           </View>
-
           <View style={styles.pinDisplay}>
             <Text style={styles.pinLabel}>YOUR SECURITY PIN</Text>
             <Text style={styles.pinValue}>{generatedPin}</Text>
-            <Text style={styles.pinNote}>PLEASE NOTE THIS DOWN. YOU WILL NEED IT TO ACCESS YOUR DATA.</Text>
+            <Text style={styles.pinNote}>PLEASE NOTE THIS DOWN. YOU WILL NEED IT TO LOGIN AGAIN.</Text>
           </View>
-
           <View style={styles.bottomSection}>
-            <Pressable 
-              style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
-              onPress={() => navigation.replace('Dashboard')}
-            >
+            <Pressable style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]} onPress={() => navigation.replace('Dashboard')}>
               <View style={styles.buttonContent}>
                 <Text style={styles.buttonText}>LET'S GO</Text>
-                <MaterialCommunityIcons name="arrow-right" size={20} color={colors.white} />
               </View>
             </Pressable>
           </View>
@@ -98,11 +121,18 @@ export default function RegisterScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <View style={styles.verticalSpine} />
-      
       <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
         <View style={styles.topSection}>
-          <Text style={styles.step}>ONBOARDING</Text>
-          <Text style={styles.title}>Identification</Text>
+          <View style={styles.modeToggle}>
+            <Pressable onPress={() => setMode('REGISTER')} style={[styles.modeBtn, mode === 'REGISTER' && styles.modeBtnActive]}>
+              <Text style={[styles.modeText, mode === 'REGISTER' && styles.modeTextActive]}>REGISTER</Text>
+            </Pressable>
+            <Pressable onPress={() => setMode('LOGIN')} style={[styles.modeBtn, mode === 'LOGIN' && styles.modeBtnActive]}>
+              <Text style={[styles.modeText, mode === 'LOGIN' && styles.modeTextActive]}>LOGIN</Text>
+            </Pressable>
+          </View>
+          <Text style={styles.step}>{mode === 'REGISTER' ? 'ONBOARDING' : 'WELCOME BACK'}</Text>
+          <Text style={styles.title}>{mode === 'REGISTER' ? 'Identification' : 'Access Hub'}</Text>
         </View>
 
         <View style={styles.inputSection}>
@@ -114,14 +144,14 @@ export default function RegisterScreen({ navigation }) {
               placeholderTextColor="#D1D5DB"
               value={name}
               onChangeText={setName}
-              autoFocus
               autoCapitalize="words"
+              autoFocus
             />
             <View style={styles.underline} />
           </View>
 
           <View style={[styles.field, { marginTop: spacing.xl }]}>
-            <Text style={styles.label}>SECURITY PIN (OPTIONAL)</Text>
+            <Text style={styles.label}>{mode === 'REGISTER' ? 'SECURITY PIN (OPTIONAL)' : 'SECURITY PIN'}</Text>
             <TextInput
               style={styles.input}
               placeholder="0000"
@@ -130,7 +160,7 @@ export default function RegisterScreen({ navigation }) {
               onChangeText={setPin}
               keyboardType="numeric"
               maxLength={4}
-              secureTextEntry={false}
+              secureTextEntry={mode === 'LOGIN'}
             />
             <View style={styles.underline} />
           </View>
@@ -138,20 +168,15 @@ export default function RegisterScreen({ navigation }) {
 
         <View style={styles.bottomSection}>
           <Pressable 
-            style={({ pressed }) => [
-              styles.button,
-              pressed && styles.buttonPressed,
-              !name.trim() && styles.buttonDisabled
-            ]}
-            onPress={handleRegister}
+            style={({ pressed }) => [styles.button, pressed && styles.buttonPressed, !name.trim() && styles.buttonDisabled]} 
+            onPress={handleAuth}
             disabled={loading || !name.trim()}
           >
             {loading ? (
               <ActivityIndicator color={colors.white} />
             ) : (
               <View style={styles.buttonContent}>
-                <Text style={styles.buttonText}>CONFIRM</Text>
-                <MaterialCommunityIcons name="chevron-right" size={24} color={colors.white} />
+                <Text style={styles.buttonText}>{mode === 'REGISTER' ? 'CONFIRM' : 'LOGIN'}</Text>
               </View>
             )}
           </Pressable>
@@ -163,71 +188,29 @@ export default function RegisterScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white },
-  verticalSpine: {
-    position: 'absolute',
-    left: spacing.xl + normalize(4),
-    top: 0,
-    bottom: 0,
-    width: 1,
-    backgroundColor: '#F3F4F6',
-  },
-  content: {
-    flex: 1,
-    padding: spacing.xl,
-    justifyContent: 'space-between',
-    paddingVertical: window.height * 0.1,
-    ...layout.container,
-  },
-  topSection: {
-    alignItems: 'flex-start',
-  },
+  verticalSpine: { position: 'absolute', left: spacing.xl + normalize(4), top: 0, bottom: 0, width: 1, backgroundColor: '#F3F4F6' },
+  content: { flex: 1, padding: spacing.xl, justifyContent: 'space-between', paddingVertical: window.height * 0.08, ...layout.container },
+  topSection: { alignItems: 'flex-start' },
+  modeToggle: { flexDirection: 'row', backgroundColor: '#F9FAFB', borderRadius: radius.full, padding: 4, marginBottom: spacing.xxl },
+  modeBtn: { paddingVertical: 8, paddingHorizontal: 20, borderRadius: radius.full },
+  modeBtnActive: { backgroundColor: colors.text },
+  modeText: { fontSize: normalize(10), fontWeight: '900', color: '#9CA3AF', letterSpacing: 1 },
+  modeTextActive: { color: colors.white },
   step: { fontSize: normalize(12), fontWeight: '900', color: '#9CA3AF', letterSpacing: 2, marginBottom: 8 },
   title: { fontSize: normalize(44), fontWeight: '900', color: colors.text, letterSpacing: -2 },
   inputSection: { marginVertical: spacing.xl },
   field: { marginBottom: spacing.md },
   label: { fontSize: normalize(10), fontWeight: '800', color: '#9CA3AF', letterSpacing: 1.5, marginBottom: 4 },
-  input: {
-    fontSize: normalize(28),
-    fontWeight: '900',
-    color: colors.text,
-    paddingVertical: spacing.sm,
-    letterSpacing: 1,
-    ...Platform.select({
-      web: { outlineStyle: 'none' }
-    })
-  },
+  input: { fontSize: normalize(28), fontWeight: '900', color: colors.text, paddingVertical: spacing.sm, letterSpacing: 1, ...Platform.select({ web: { outlineStyle: 'none' } }) },
   underline: { height: 3, backgroundColor: colors.text, width: normalize(40) },
   pinDisplay: { marginVertical: spacing.xl, alignItems: 'flex-start' },
   pinLabel: { fontSize: normalize(12), fontWeight: '900', color: '#9CA3AF', letterSpacing: 2, marginBottom: 12 },
   pinValue: { fontSize: normalize(80), fontWeight: '900', color: colors.text, letterSpacing: 8 },
   pinNote: { fontSize: normalize(12), color: '#9CA3AF', fontWeight: '700', lineHeight: 18, marginTop: spacing.xl, maxWidth: '80%' },
   bottomSection: { alignItems: 'flex-start' },
-  button: { 
-    backgroundColor: colors.text, 
-    paddingVertical: normalize(20), 
-    paddingHorizontal: normalize(32), 
-    borderRadius: radius.xs, 
-    width: '100%', 
-    alignItems: 'center',
-    ...Platform.select({
-      web: { cursor: 'pointer' }
-    })
-  },
-  buttonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  buttonPressed: { 
-    opacity: 0.85, 
-    transform: [{ scale: 0.98 }] 
-  },
+  button: { backgroundColor: colors.text, paddingVertical: normalize(20), paddingHorizontal: normalize(32), borderRadius: radius.xs, width: '100%', alignItems: 'center' },
+  buttonContent: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  buttonPressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
   buttonDisabled: { opacity: 0.1 },
-  buttonText: { 
-    color: colors.white, 
-    fontSize: normalize(16), 
-    fontWeight: '900', 
-    letterSpacing: 4,
-    textTransform: 'uppercase'
-  },
+  buttonText: { color: colors.white, fontSize: normalize(16), fontWeight: '900', letterSpacing: 4, textTransform: 'uppercase' },
 });
