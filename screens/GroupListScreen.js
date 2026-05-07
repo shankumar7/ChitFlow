@@ -128,7 +128,7 @@ export default function GroupListScreen({ navigation }) {
         )}
       </ScrollView>
 
-      {/* FAB FOR NEW GROUP */}
+      {/* FAB FOR NEW GROUP - DOCKED ABOVE NAV BAR */}
       <Pressable 
         style={({ pressed }) => [styles.fab, pressed && { transform: [{ scale: 0.95 }] }]}
         onPress={() => navigation.navigate('CreateGroup')}
@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
   fab: { 
     position: 'absolute', 
     right: spacing.xl, 
-    bottom: Platform.OS === 'ios' ? 100 : 90, 
+    bottom: 20, // Perfectly docked above navigation bar
     width: 64, 
     height: 64, 
     borderRadius: 32, 
