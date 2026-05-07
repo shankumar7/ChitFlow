@@ -26,6 +26,9 @@ export default function ProfileScreen({ navigation }) {
   const [updateStatus, setUpdateStatus] = useState('LATEST');
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
+  // Smart fallback for status bar height
+  const safeTop = insets.top || StatusBar.currentHeight || 30;
+
   useEffect(() => {
     loadUser();
   }, []);
@@ -34,11 +37,9 @@ export default function ProfileScreen({ navigation }) {
     try {
       const storedName = await AsyncStorage.getItem('user_name');
       const storedPin = await AsyncStorage.getItem('user_pin');
-      
       if (storedName) {
         const userRef = doc(db, 'users', storedName.toLowerCase());
         const userSnap = await getDoc(userRef);
-        
         if (userSnap.exists()) {
           const userData = userSnap.data();
           setUser({ 
@@ -50,11 +51,10 @@ export default function ProfileScreen({ navigation }) {
           setUser({ name: storedName, pin: storedPin, groupsCount: 0 });
         }
       }
-
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 800,
-        useNativeDriver: Platform.OS !== 'web',
+        useNativeDriver: true,
       }).start();
     } catch (e) {
       console.error(e);
@@ -65,68 +65,42 @@ export default function ProfileScreen({ navigation }) {
 
   const onCheckForUpdate = async () => {
     setUpdateStatus('CHECKING');
-    if (Platform.OS === 'web') {
-      setTimeout(() => {
-        setUpdateStatus('LATEST');
-        Alert.alert("Web Version", "You are always on the latest version on the web.");
-      }, 1000);
-      return;
-    }
-
     try {
+      if (Platform.OS === 'web') {
+        setTimeout(() => { setUpdateStatus('LATEST'); }, 1000);
+        return;
+      }
       const update = await Updates.checkForUpdateAsync();
       if (update.isAvailable) {
         setUpdateStatus('DOWNLOADING');
         await Updates.fetchUpdateAsync();
         setUpdateStatus('READY');
-        Alert.alert(
-          "Update Ready", 
-          "New version downloaded. Install the update now to apply changes.",
-          [{ text: "INSTALL", onPress: () => Updates.reloadAsync() }]
-        );
+        Alert.alert("Update Ready", "New version downloaded.", [{ text: "INSTALL", onPress: () => Updates.reloadAsync() }]);
       } else {
         setUpdateStatus('LATEST');
-        Alert.alert("Up to Date", "You are already using the latest version of ChitFlow.");
+        Alert.alert("Up to Date", "You are already using the latest version.");
       }
     } catch (e) {
-      setTimeout(() => {
-        setUpdateStatus('LATEST');
-        if (__DEV__) {
-          Alert.alert("Diagnostic Success", "OTA Update bridge is active.");
-        } else {
-          Alert.alert("Up to Date", "App is synchronized.");
-        }
-      }, 1500);
+      setTimeout(() => { setUpdateStatus('LATEST'); }, 1500);
     }
   };
 
   const handleLogout = async () => {
-    Alert.alert(
-      "Logout",
-      "Are you sure you want to exit your session?",
-      [
-        { text: "Cancel", style: "cancel" },
-        { 
-          text: "Logout", 
-          onPress: async () => {
-            await AsyncStorage.clear();
-            navigation.reset({ index: 0, routes: [{ name: 'Welcome' }] });
-          },
-          style: 'destructive'
-        }
-      ]
-    );
+    Alert.alert("Logout", "Are you sure?", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Logout", onPress: async () => { await AsyncStorage.clear(); navigation.reset({ index: 0, routes: [{ name: 'Welcome' }] }); }, style: 'destructive' }
+    ]);
   };
 
   return (
     <View style={styles.container}>
-      {/* Ensuring the Status Bar is truly solid now that edgeToEdge is disabled */}
-      <StatusBar translucent={false} backgroundColor="white" barStyle="dark-content" />
+      <StatusBar translucent={true} backgroundColor="transparent" barStyle="dark-content" />
+      
       <View style={styles.verticalSpine} />
       
       <ScrollView 
         style={styles.scrollView} 
-        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 40 }]}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: safeTop + 20, paddingBottom: insets.bottom + 40 }]}
         showsVerticalScrollIndicator={false}
       >
         <Animated.View style={{ opacity: fadeAnim }}>
@@ -189,11 +163,7 @@ export default function ProfileScreen({ navigation }) {
                     onPress={updateStatus === 'READY' ? () => Updates.reloadAsync() : onCheckForUpdate}
                     disabled={updateStatus === 'CHECKING' || updateStatus === 'DOWNLOADING'}
                   >
-                    {updateStatus === 'CHECKING' || updateStatus === 'DOWNLOADING' ? (
-                      <ActivityIndicator size="small" color={colors.white} />
-                    ) : (
-                      <Text style={styles.diagBtnText}>{updateStatus === 'READY' ? 'INSTALL' : 'CHECK'}</Text>
-                    )}
+                    <Text style={styles.diagBtnText}>{updateStatus === 'READY' ? 'INSTALL' : 'CHECK'}</Text>
                   </Pressable>
                 </View>
               </View>
@@ -206,18 +176,28 @@ export default function ProfileScreen({ navigation }) {
                   <Text style={styles.logoutText}>Log Out</Text>
                   <MaterialCommunityIcons name="logout" size={20} color={colors.white} />
                 </Pressable>
-                <Text style={styles.note}>End your session</Text>
               </View>
             </View>
           )}
         </Animated.View>
       </ScrollView>
+
+      {/* THE ABSOLUTE SHIELD */}
+      <View style={[styles.topBlocker, { height: safeTop }]} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white },
+  topBlocker: { 
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: colors.white, 
+    zIndex: 9999, 
+  },
   verticalSpine: { position: 'absolute', left: spacing.xl + normalize(4), top: 0, bottom: 0, width: 1, backgroundColor: '#F3F4F6' },
   scrollView: { flex: 1 },
   scrollContent: { paddingHorizontal: spacing.xl, ...layout.container },
@@ -237,11 +217,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.xs, 
     justifyContent: 'center', 
     alignItems: 'center', 
-    marginBottom: spacing.lg,
-    ...Platform.select({
-      web: { boxShadow: '0 8px 20px rgba(0,0,0,0.15)' },
-      default: { shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 8 }
-    })
+    marginBottom: spacing.lg
   },
   label: { fontSize: normalize(10), fontWeight: '800', color: '#9CA3AF', letterSpacing: 1.5, marginBottom: 12 },
   name: { fontSize: normalize(42), fontWeight: '900', color: colors.text, letterSpacing: -1 },
@@ -251,19 +227,7 @@ const styles = StyleSheet.create({
   detailLabel: { fontSize: normalize(8), fontWeight: '900', color: '#9CA3AF', letterSpacing: 1, marginBottom: 8 },
   detailValue: { fontSize: normalize(18), fontWeight: '900', color: colors.text, letterSpacing: 1 },
   diagnosticHub: { marginVertical: spacing.xl },
-  diagCard: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    backgroundColor: '#fff', 
-    padding: spacing.md, 
-    borderRadius: radius.xs, 
-    borderWidth: 1, 
-    borderColor: '#F3F4F6',
-    ...Platform.select({
-      web: { boxShadow: '0 2px 8px rgba(0,0,0,0.05)' },
-      default: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 1 }
-    })
-  },
+  diagCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: spacing.md, borderRadius: radius.xs, borderWidth: 1, borderColor: '#F3F4F6' },
   diagCardReady: { borderColor: '#3B82F6', backgroundColor: '#F0F7FF' },
   diagStatusLine: { width: 4, height: '100%', minHeight: 32, backgroundColor: '#10B981', borderRadius: 2, marginRight: 12 },
   diagInfo: { flex: 1 },
@@ -280,6 +244,5 @@ const styles = StyleSheet.create({
   bottomSection: { marginTop: spacing.xxl },
   logoutButton: { backgroundColor: '#EF4444', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, paddingVertical: normalize(18), borderRadius: radius.xs },
   logoutButtonPressed: { opacity: 0.8 },
-  logoutText: { color: colors.white, fontSize: normalize(14), fontWeight: '900', letterSpacing: 2 },
-  note: { fontSize: normalize(10), color: '#9CA3AF', fontWeight: '700', marginTop: 12, textAlign: 'center' }
+  logoutText: { color: colors.white, fontSize: normalize(14), fontWeight: '900', letterSpacing: 2 }
 });

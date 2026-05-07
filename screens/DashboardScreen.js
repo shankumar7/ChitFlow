@@ -13,12 +13,11 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { subscribeGroups } from '../services/groupService';
 import { subscribeAllPaymentsByMonth } from '../services/paymentService';
 import { getCurrentMonthNumber } from '../utils/date';
 import { colors, spacing, radius, normalize, layout } from '../utils/theme';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 const SummaryCard = ({ title, value, icon, color, opacity, translateY }) => (
   <Animated.View style={[styles.card, { opacity, transform: [{ translateY }] }]}>
@@ -55,7 +54,9 @@ export default function DashboardScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
-  const fabAnim = useRef(new Animated.Value(0)).current;
+
+  // Use a smart fallback for status bar height
+  const safeTop = insets.top || StatusBar.currentHeight || 30;
 
   useFocusEffect(
     useCallback(() => {
@@ -67,17 +68,14 @@ export default function DashboardScreen({ navigation }) {
 
   useEffect(() => {
     const currentMonth = getCurrentMonthNumber();
-    
     const unsubGroups = subscribeGroups((data) => {
       setGroups(data);
       setLoading(false);
       startAnimations();
     });
-
     const unsubPayments = subscribeAllPaymentsByMonth(currentMonth, (data) => {
       setMonthlyCollections(data);
     });
-
     return () => {
       unsubGroups();
       unsubPayments();
@@ -85,35 +83,32 @@ export default function DashboardScreen({ navigation }) {
   }, []);
 
   const startAnimations = () => {
-    const useNative = Platform.OS !== 'web';
     Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: useNative }),
-      Animated.timing(slideAnim, { toValue: 0, duration: 800, useNativeDriver: useNative }),
-      Animated.delay(400).start(() => {
-        Animated.spring(fabAnim, { toValue: 1, friction: 4, tension: 40, useNativeDriver: useNative }).start();
-      })
+      Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 800, useNativeDriver: true }),
     ]).start();
   };
 
   const totalCollectedSoFar = monthlyCollections.reduce((sum, p) => sum + (p.amount || 0), 0);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.white }]}>
-      <StatusBar translucent={false} backgroundColor="white" barStyle="dark-content" />
+    <View style={styles.container}>
+      <StatusBar translucent={true} backgroundColor="transparent" barStyle="dark-content" />
+      
       <View style={styles.verticalSpine} />
       
-      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-        <View style={styles.brandContainer}>
-          <Text style={styles.titleHeavy}>Chit</Text>
-          <Text style={styles.titleLight}>Flow</Text>
-        </View>
-      </View>
-
       <ScrollView 
         style={styles.scrollView} 
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 120 }]}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: safeTop + 20, paddingBottom: insets.bottom + 120 }]}
         showsVerticalScrollIndicator={false}
       >
+        <View style={styles.header}>
+          <View style={styles.brandContainer}>
+            <Text style={styles.titleHeavy}>Chit</Text>
+            <Text style={styles.titleLight}>Flow</Text>
+          </View>
+        </View>
+
         <View style={styles.summaryGrid}>
           <SummaryCard 
             title="MONTHLY FLOW (COLLECTED)" 
@@ -157,20 +152,29 @@ export default function DashboardScreen({ navigation }) {
         </Animated.View>
       </ScrollView>
 
+      {/* THE ABSOLUTE SHIELD: Positioned last to ensure it covers everything else */}
+      <View style={[styles.topBlocker, { height: safeTop }]} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, backgroundColor: colors.white },
+  topBlocker: { 
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: colors.white, 
+    zIndex: 9999, // Absolute priority
+  },
   verticalSpine: { position: 'absolute', left: spacing.xl + normalize(4), top: 0, bottom: 0, width: 1, backgroundColor: '#F3F4F6' },
   header: { 
     flexDirection: 'row', 
     justifyContent: 'space-between', 
     alignItems: 'center', 
-    paddingHorizontal: spacing.xl,
     paddingBottom: spacing.md,
-    marginBottom: spacing.xl
+    marginBottom: spacing.md
   },
   brandContainer: { flexDirection: 'row', alignItems: 'baseline', marginLeft: -2 },
   titleHeavy: { fontSize: normalize(28), fontWeight: '900', color: colors.text, letterSpacing: -1 },
@@ -183,11 +187,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg, 
     borderRadius: radius.xs,
     borderWidth: 1,
-    borderColor: '#F3F4F6',
-    ...Platform.select({
-      web: { boxShadow: '0 4px 12px rgba(0,0,0,0.05)' },
-      default: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 2 }
-    })
+    borderColor: '#F3F4F6'
   },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   cardLabel: { fontSize: normalize(10), fontWeight: '800', color: '#9CA3AF', letterSpacing: 1.5 },
@@ -219,6 +219,5 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB'
   },
   emptyText: { fontSize: normalize(16), fontWeight: '800', color: '#9CA3AF', marginTop: 12 },
-  emptySub: { fontSize: normalize(12), color: '#D1D5DB', textAlign: 'center', marginTop: 8, paddingHorizontal: 40 },
   emptySub: { fontSize: normalize(12), color: '#D1D5DB', textAlign: 'center', marginTop: 8, paddingHorizontal: 40 }
 });
