@@ -38,12 +38,14 @@ export default function GroupListScreen({ navigation }) {
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const fabAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const unsubscribe = subscribeGroups((data) => {
       setGroups(data);
       setLoading(false);
       Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }).start();
+      Animated.spring(fabAnim, { toValue: 1, friction: 4, tension: 40, useNativeDriver: true }).start();
     });
     return unsubscribe;
   }, []);
@@ -63,7 +65,7 @@ export default function GroupListScreen({ navigation }) {
 
       <ScrollView 
         style={styles.scrollView} 
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 100 }]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 120 }]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.section}>
@@ -83,11 +85,30 @@ export default function GroupListScreen({ navigation }) {
             <View style={styles.emptyState}>
               <MaterialCommunityIcons name="folder-open-outline" size={48} color="#E5E7EB" />
               <Text style={styles.emptyText}>No Active Circles</Text>
-              <Text style={styles.emptySub}>Tap the + button on Home to create a new Chitti group.</Text>
+              <Text style={styles.emptySub}>Tap the + button to create a new Chitti group.</Text>
             </View>
           )}
         </View>
       </ScrollView>
+
+      <Animated.View style={[
+        styles.fabContainer, 
+        { 
+          bottom: spacing.xs,
+          opacity: fabAnim, 
+          transform: [{ scale: fabAnim }, { translateY: fabAnim.interpolate({
+            inputRange: [0, 1],
+            outputRange: [100, 0]
+          }) }] 
+        }
+      ]}>
+        <Pressable 
+          style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}
+          onPress={() => navigation.navigate('CreateGroup')}
+        >
+          <MaterialCommunityIcons name="plus" size={32} color={colors.white} />
+        </Pressable>
+      </Animated.View>
     </View>
   );
 }
@@ -127,5 +148,23 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB'
   },
   emptyText: { fontSize: normalize(16), fontWeight: '800', color: '#9CA3AF', marginTop: 12 },
-  emptySub: { fontSize: normalize(12), color: '#D1D5DB', textAlign: 'center', marginTop: 8, paddingHorizontal: 40 }
+  emptySub: { fontSize: normalize(12), color: '#D1D5DB', textAlign: 'center', marginTop: 8, paddingHorizontal: 40 },
+  fabContainer: { 
+    position: 'absolute', 
+    right: spacing.xl,
+    zIndex: 100 
+  },
+  fab: { 
+    backgroundColor: colors.text, 
+    width: normalize(64), 
+    height: normalize(64), 
+    borderRadius: radius.full, 
+    justifyContent: 'center', 
+    alignItems: 'center',
+    ...Platform.select({
+      web: { boxShadow: '0 8px 24px rgba(0,0,0,0.3)' },
+      default: { shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 12 }
+    })
+  },
+  fabPressed: { transform: [{ scale: 0.9 }], opacity: 0.9 }
 });

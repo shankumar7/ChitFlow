@@ -153,7 +153,7 @@ export default function AuthScreen({ navigation }) {
             <View style={styles.bottomSection}>
               <Pressable 
                 style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]} 
-                onPress={() => navigation.replace('Dashboard')}
+                onPress={() => navigation.replace('MainTabs')}
               >
                 <View style={styles.buttonContent}>
                   <Text style={styles.buttonText}>ENTER DASHBOARD</Text>

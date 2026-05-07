@@ -4,7 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { View, ActivityIndicator, StyleSheet, Platform } from 'react-native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import WelcomeScreen from './screens/WelcomeScreen';
@@ -23,6 +23,8 @@ const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
 function MainTabs() {
+  const insets = useSafeAreaInsets();
+  
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -41,19 +43,20 @@ function MainTabs() {
           backgroundColor: '#FFFFFF',
           borderTopWidth: 1,
           borderTopColor: '#F3F4F6',
-          height: Platform.OS === 'ios' ? 88 : 64,
-          paddingBottom: Platform.OS === 'ios' ? 30 : 10,
-          paddingTop: 10,
+          // Dynamic height and padding based on device safe area
+          height: Platform.OS === 'ios' ? 60 + insets.bottom : 70 + (insets.bottom > 0 ? insets.bottom : 5),
+          paddingBottom: insets.bottom > 0 ? insets.bottom : 12,
+          paddingTop: 12,
           ...Platform.select({
             web: { boxShadow: '0 -4px 12px rgba(0,0,0,0.05)' },
-            default: { shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 10 }
+            default: { shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 15 }
           })
         },
         tabBarLabelStyle: {
           fontSize: normalize(10),
           fontWeight: '900',
           letterSpacing: 0.5,
-          marginBottom: 0
+          marginBottom: 4
         }
       })}
     >

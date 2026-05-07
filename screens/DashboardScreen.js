@@ -8,7 +8,6 @@ import {
   Animated, 
   Platform, 
   StatusBar,
-  Alert,
   BackHandler,
   ActivityIndicator
 } from 'react-native';
@@ -17,7 +16,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { subscribeGroups } from '../services/groupService';
-import { colors, spacing, radius, normalize, window, layout } from '../utils/theme';
+import { subscribeAllPaymentsByMonth } from '../services/paymentService';
+import { getCurrentMonthNumber } from '../utils/date';
+import { colors, spacing, radius, normalize, layout } from '../utils/theme';
 
 const SummaryCard = ({ title, value, icon, color, opacity, translateY }) => (
   <Animated.View style={[styles.card, { opacity, transform: [{ translateY }] }]}>
@@ -50,6 +51,7 @@ const GroupCard = ({ group, onPress, opacity, index }) => (
 export default function DashboardScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const [groups, setGroups] = useState([]);
+  const [monthlyCollections, setMonthlyCollections] = useState([]);
   const [loading, setLoading] = useState(true);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
@@ -57,29 +59,28 @@ export default function DashboardScreen({ navigation }) {
 
   useFocusEffect(
     useCallback(() => {
-      const onBackPress = () => {
-        // Only restrict back press on Dashboard itself
-        return true;
-      };
-
-      const subscription = BackHandler.addEventListener(
-        'hardwareBackPress',
-        onBackPress
-      );
-
+      const onBackPress = () => true;
+      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
       return () => subscription.remove();
     }, [])
   );
 
   useEffect(() => {
-    const unsubscribe = subscribeGroups((data) => {
+    const currentMonth = getCurrentMonthNumber();
+    
+    const unsubGroups = subscribeGroups((data) => {
       setGroups(data);
       setLoading(false);
       startAnimations();
     });
 
+    const unsubPayments = subscribeAllPaymentsByMonth(currentMonth, (data) => {
+      setMonthlyCollections(data);
+    });
+
     return () => {
-      unsubscribe();
+      unsubGroups();
+      unsubPayments();
     };
   }, []);
 
@@ -94,7 +95,7 @@ export default function DashboardScreen({ navigation }) {
     ]).start();
   };
 
-  const totalValue = groups.reduce((sum, g) => sum + (g.monthlyAmount || 0), 0);
+  const totalCollectedSoFar = monthlyCollections.reduce((sum, p) => sum + (p.amount || 0), 0);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.white }]}>
@@ -106,12 +107,6 @@ export default function DashboardScreen({ navigation }) {
           <Text style={styles.titleHeavy}>Chit</Text>
           <Text style={styles.titleLight}>Flow</Text>
         </View>
-        <Pressable 
-          onPress={() => navigation.navigate('Profile')}
-          style={({ pressed }) => [styles.profileBtn, pressed && styles.profileBtnPressed]}
-        >
-          <MaterialCommunityIcons name="account-circle-outline" size={32} color={colors.text} />
-        </Pressable>
       </View>
 
       <ScrollView 
@@ -120,16 +115,30 @@ export default function DashboardScreen({ navigation }) {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.summaryGrid}>
-          <SummaryCard title="MONTHLY FLOW" value={`₹ ${totalValue.toLocaleString()}`} icon="trending-up" color="#10B981" opacity={fadeAnim} translateY={slideAnim} />
-          <SummaryCard title="ACTIVE GROUPS" value={groups.length.toString()} icon="layers-outline" color="#3B82F6" opacity={fadeAnim} translateY={slideAnim} />
+          <SummaryCard 
+            title="MONTHLY FLOW (COLLECTED)" 
+            value={`₹ ${totalCollectedSoFar.toLocaleString()}`} 
+            icon="cash-multiple" 
+            color="#10B981" 
+            opacity={fadeAnim} 
+            translateY={slideAnim} 
+          />
+          <SummaryCard 
+            title="ACTIVE CHITTI GROUPS" 
+            value={groups.length.toString()} 
+            icon="layers-outline" 
+            color="#3B82F6" 
+            opacity={fadeAnim} 
+            translateY={slideAnim} 
+          />
         </View>
 
         <Animated.View style={[styles.section, { opacity: fadeAnim }]}>
-          <Text style={styles.sectionLabel}>YOUR ARCHITECTURE</Text>
+          <Text style={styles.sectionLabel}>RECENT ARCHITECTURE</Text>
           {loading ? (
             <ActivityIndicator size="small" color={colors.text} style={{ marginTop: 20 }} />
           ) : groups.length > 0 ? (
-            groups.map((group, index) => (
+            groups.slice(0, 3).map((group, index) => (
               <GroupCard 
                 key={group.id} 
                 group={group} 
@@ -141,31 +150,13 @@ export default function DashboardScreen({ navigation }) {
           ) : (
             <View style={styles.emptyState}>
               <MaterialCommunityIcons name="playlist-remove" size={48} color="#E5E7EB" />
-              <Text style={styles.emptyText}>Empty Ledger</Text>
-              <Text style={styles.emptySub}>Initialize your first group to start the flow.</Text>
+              <Text style={styles.emptyText}>No Active Chits</Text>
+              <Text style={styles.emptySub}>Initialize a group to start managing collections.</Text>
             </View>
           )}
         </Animated.View>
       </ScrollView>
 
-      <Animated.View style={[
-        styles.fabContainer, 
-        { 
-          bottom: insets.bottom + 20,
-          opacity: fabAnim, 
-          transform: [{ scale: fabAnim }, { translateY: fabAnim.interpolate({
-            inputRange: [0, 1],
-            outputRange: [100, 0]
-          }) }] 
-        }
-      ]}>
-        <Pressable 
-          style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}
-          onPress={() => navigation.navigate('CreateGroup')}
-        >
-          <MaterialCommunityIcons name="plus" size={32} color={colors.white} />
-        </Pressable>
-      </Animated.View>
     </View>
   );
 }
@@ -184,8 +175,6 @@ const styles = StyleSheet.create({
   brandContainer: { flexDirection: 'row', alignItems: 'baseline', marginLeft: -2 },
   titleHeavy: { fontSize: normalize(28), fontWeight: '900', color: colors.text, letterSpacing: -1 },
   titleLight: { fontSize: normalize(28), fontWeight: '200', color: colors.text, letterSpacing: -0.5 },
-  profileBtn: { padding: 4 },
-  profileBtnPressed: { opacity: 0.6 },
   scrollView: { flex: 1 },
   scrollContent: { paddingHorizontal: spacing.xl },
   summaryGrid: { gap: spacing.md, marginBottom: spacing.xxl },
@@ -231,22 +220,5 @@ const styles = StyleSheet.create({
   },
   emptyText: { fontSize: normalize(16), fontWeight: '800', color: '#9CA3AF', marginTop: 12 },
   emptySub: { fontSize: normalize(12), color: '#D1D5DB', textAlign: 'center', marginTop: 8, paddingHorizontal: 40 },
-  fabContainer: { 
-    position: 'absolute', 
-    right: spacing.xl,
-    zIndex: 100 
-  },
-  fab: { 
-    backgroundColor: colors.text, 
-    width: normalize(64), 
-    height: normalize(64), 
-    borderRadius: radius.full, 
-    justifyContent: 'center', 
-    alignItems: 'center',
-    ...Platform.select({
-      web: { boxShadow: '0 8px 24px rgba(0,0,0,0.3)' },
-      default: { shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 12 }
-    })
-  },
-  fabPressed: { transform: [{ scale: 0.9 }], opacity: 0.9 }
+  emptySub: { fontSize: normalize(12), color: '#D1D5DB', textAlign: 'center', marginTop: 8, paddingHorizontal: 40 }
 });
