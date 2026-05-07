@@ -1,20 +1,69 @@
 import React, { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, ActivityIndicator, StyleSheet, Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import WelcomeScreen from './screens/WelcomeScreen';
 import RegisterScreen from './screens/RegisterScreen';
 import DashboardScreen from './screens/DashboardScreen';
 import ProfileScreen from './screens/ProfileScreen';
+import GroupListScreen from './screens/GroupListScreen';
+import TransactionsScreen from './screens/TransactionsScreen';
 import CreateGroupScreen from './screens/CreateGroupScreen';
 import MemberListScreen from './screens/MemberListScreen';
 import AddMemberScreen from './screens/AddMemberScreen';
 import PaymentScreen from './screens/PaymentScreen';
+import { colors, normalize } from './utils/theme';
 
 const Stack = createNativeStackNavigator();
+const Tab = createBottomTabNavigator();
+
+function MainTabs() {
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName;
+          if (route.name === 'Home') iconName = focused ? 'home' : 'home-outline';
+          else if (route.name === 'Groups') iconName = focused ? 'layers' : 'layers-outline';
+          else if (route.name === 'Transactions') iconName = focused ? 'swap-horizontal' : 'swap-horizontal';
+          else if (route.name === 'Profile') iconName = focused ? 'account' : 'account-outline';
+          return <MaterialCommunityIcons name={iconName} size={24} color={color} />;
+        },
+        tabBarActiveTintColor: colors.text,
+        tabBarInactiveTintColor: '#9CA3AF',
+        tabBarStyle: {
+          backgroundColor: '#FFFFFF',
+          borderTopWidth: 1,
+          borderTopColor: '#F3F4F6',
+          height: Platform.OS === 'ios' ? 88 : 64,
+          paddingBottom: Platform.OS === 'ios' ? 30 : 10,
+          paddingTop: 10,
+          ...Platform.select({
+            web: { boxShadow: '0 -4px 12px rgba(0,0,0,0.05)' },
+            default: { shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 10 }
+          })
+        },
+        tabBarLabelStyle: {
+          fontSize: normalize(10),
+          fontWeight: '900',
+          letterSpacing: 0.5,
+          marginBottom: 0
+        }
+      })}
+    >
+      <Tab.Screen name="Home" component={DashboardScreen} />
+      <Tab.Screen name="Groups" component={GroupListScreen} />
+      <Tab.Screen name="Transactions" component={TransactionsScreen} />
+      <Tab.Screen name="Profile" component={ProfileScreen} />
+    </Tab.Navigator>
+  );
+}
 
 export default function App() {
   const [loading, setLoading] = useState(true);
@@ -28,10 +77,7 @@ export default function App() {
     try {
       const storedName = await AsyncStorage.getItem('user_name');
       const storedPin = await AsyncStorage.getItem('user_pin');
-      
-      if (storedName && storedPin) {
-        setInitialRoute('Dashboard');
-      }
+      if (storedName && storedPin) setInitialRoute('MainTabs');
     } catch (e) {
       console.error(e);
     } finally {
@@ -42,7 +88,7 @@ export default function App() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#000000" />
+        <ActivityIndicator size="large" color={colors.text} />
       </View>
     );
   }
@@ -56,8 +102,7 @@ export default function App() {
         >
           <Stack.Screen name="Welcome" component={WelcomeScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
-          <Stack.Screen name="Dashboard" component={DashboardScreen} />
-          <Stack.Screen name="Profile" component={ProfileScreen} />
+          <Stack.Screen name="MainTabs" component={MainTabs} />
           <Stack.Screen name="CreateGroup" component={CreateGroupScreen} />
           <Stack.Screen name="MemberList" component={MemberListScreen} />
           <Stack.Screen name="AddMember" component={AddMemberScreen} />

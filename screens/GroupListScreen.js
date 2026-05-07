@@ -1,102 +1,131 @@
-import React, { useEffect, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  StyleSheet, 
+  Text, 
+  View, 
+  ScrollView, 
+  Pressable, 
+  Animated, 
+  Platform, 
+  StatusBar,
+  ActivityIndicator
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { subscribeGroups } from '../services/groupService';
-import EmptyState from '../components/EmptyState';
-import { colors, spacing, radius, elevation, normalize, layout } from '../utils/theme';
+import { colors, spacing, radius, normalize, layout } from '../utils/theme';
+
+const GroupCard = ({ group, onPress, opacity, index }) => (
+  <Animated.View style={[styles.groupCard, { opacity, transform: [{ translateY: opacity.interpolate({
+    inputRange: [0, 1],
+    outputRange: [20 * (index + 1), 0]
+  }) }] }]}>
+    <Pressable onPress={() => onPress(group)} style={styles.groupCardInner}>
+      <View style={styles.groupIcon}>
+        <MaterialCommunityIcons name="layers-outline" size={24} color={colors.text} />
+      </View>
+      <View style={styles.groupInfo}>
+        <Text style={styles.groupName}>{group.name.toUpperCase()}</Text>
+        <Text style={styles.groupSub}>₹ {group.monthlyAmount.toLocaleString()} • {group.duration} MONTHS</Text>
+      </View>
+      <MaterialCommunityIcons name="chevron-right" size={24} color="#D1D5DB" />
+    </Pressable>
+  </Animated.View>
+);
 
 export default function GroupListScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const unsubscribe = subscribeGroups((data) => {
       setGroups(data);
       setLoading(false);
+      Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }).start();
     });
     return unsubscribe;
   }, []);
 
-  const renderGroupItem = ({ item }) => (
-    <Pressable 
-      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
-      onPress={() => navigation.navigate('Payment', { 
-        groupId: item.id, 
-        groupName: item.name,
-        monthlyAmount: item.monthlyAmount 
-      })}
-    >
-      <View style={styles.cardHeader}>
-        <View style={styles.iconBox}>
-          <MaterialCommunityIcons name="account-group" size={normalize(24)} color={colors.primary} />
-        </View>
-        <View style={styles.titleInfo}>
-          <Text style={styles.groupName}>{item.name}</Text>
-          <Text style={styles.memberCount}>{item.memberCount || 0} Members</Text>
-        </View>
-        <MaterialCommunityIcons name="chevron-right" size={24} color={colors.textLight} />
-      </View>
-      <View style={styles.divider} />
-      <View style={styles.cardFooter}>
-        <View style={styles.stat}>
-          <Text style={styles.statLabel}>MONTHLY</Text>
-          <Text style={styles.statValue}>₹{item.monthlyAmount}</Text>
-        </View>
-        <View style={styles.stat}>
-          <Text style={styles.statLabel}>DURATION</Text>
-          <Text style={styles.statValue}>{item.duration} Months</Text>
-        </View>
-        <View style={[styles.badge, { backgroundColor: item.status === 'active' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)' }]}>
-          <View style={[styles.dot, { backgroundColor: item.status === 'active' ? colors.secondary : colors.accent }]} />
-          <Text style={[styles.badgeText, { color: item.status === 'active' ? colors.secondary : colors.accent }]}>
-            {item.status?.toUpperCase() || 'ACTIVE'}
-          </Text>
-        </View>
-      </View>
-    </Pressable>
-  );
-
-  if (loading) return <View style={styles.center}><ActivityIndicator color={colors.primary} /></View>;
-
   return (
-    <View style={styles.root}>
-      <FlatList
-        data={groups}
-        keyExtractor={(item) => item.id}
-        style={styles.list}
-        contentContainerStyle={styles.scrollList}
-        renderItem={renderGroupItem}
-        ListEmptyComponent={
-          <EmptyState 
-            title="No groups found" 
-            subtitle="Create your first chit group to start managing." 
-            actionLabel="Create Group"
-            onAction={() => navigation.navigate('CreateGroup')}
-          />
-        }
-      />
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" />
+      <View style={styles.verticalSpine} />
+      
+      <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
+        <Text style={styles.step}>CHITTI ARCHITECTURE</Text>
+        <View style={styles.brandTitleContainer}>
+          <Text style={styles.titleHeavy}>All</Text>
+          <Text style={styles.titleLight}>Groups</Text>
+        </View>
+      </View>
+
+      <ScrollView 
+        style={styles.scrollView} 
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 100 }]}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.section}>
+          {loading ? (
+            <ActivityIndicator size="large" color={colors.text} style={{ marginTop: 100 }} />
+          ) : groups.length > 0 ? (
+            groups.map((group, index) => (
+              <GroupCard 
+                key={group.id} 
+                group={group} 
+                index={index}
+                opacity={fadeAnim}
+                onPress={() => navigation.navigate('MemberList', { groupId: group.id, groupName: group.name, monthlyAmount: group.monthlyAmount })} 
+              />
+            ))
+          ) : (
+            <View style={styles.emptyState}>
+              <MaterialCommunityIcons name="folder-open-outline" size={48} color="#E5E7EB" />
+              <Text style={styles.emptyText}>No Active Circles</Text>
+              <Text style={styles.emptySub}>Tap the + button on Home to create a new Chitti group.</Text>
+            </View>
+          )}
+        </View>
+      </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
-  list: layout.container,
-  scrollList: { padding: spacing.md },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  card: { backgroundColor: colors.white, borderRadius: radius.xl, padding: spacing.lg, marginBottom: spacing.md, borderWidth: 1, borderColor: colors.border, ...elevation.card },
-  cardPressed: { transform: [{ scale: 0.98 }], opacity: 0.9 },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md },
-  iconBox: { width: normalize(48), height: normalize(48), borderRadius: radius.md, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center', marginRight: spacing.md },
-  titleInfo: { flex: 1 },
-  groupName: { fontSize: normalize(18), fontWeight: '900', color: colors.text },
-  memberCount: { fontSize: normalize(13), color: colors.textMuted, marginTop: 2, fontWeight: '600' },
-  divider: { height: 1, backgroundColor: colors.border, marginBottom: spacing.md, opacity: 0.5 },
-  cardFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  stat: { flex: 1 },
-  statLabel: { fontSize: normalize(10), fontWeight: '800', color: colors.textLight, letterSpacing: 0.5 },
-  statValue: { fontSize: normalize(15), fontWeight: '800', color: colors.text, marginTop: 2 },
-  badge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.sm, gap: 6 },
-  dot: { width: 6, height: 6, borderRadius: 3 },
-  badgeText: { fontSize: normalize(11), fontWeight: '900', letterSpacing: 0.5 },
+  container: { flex: 1, backgroundColor: colors.white },
+  verticalSpine: { position: 'absolute', left: spacing.xl + normalize(4), top: 0, bottom: 0, width: 1, backgroundColor: '#F3F4F6' },
+  header: { paddingHorizontal: spacing.xl, marginBottom: spacing.xl },
+  step: { fontSize: normalize(10), fontWeight: '900', color: '#9CA3AF', letterSpacing: 2, marginBottom: 4 },
+  brandTitleContainer: { flexDirection: 'row', alignItems: 'baseline', marginLeft: -2 },
+  titleHeavy: { fontSize: normalize(44), fontWeight: '900', color: colors.text, letterSpacing: -2 },
+  titleLight: { fontSize: normalize(44), fontWeight: '200', color: colors.text, letterSpacing: -1 },
+  scrollView: { flex: 1 },
+  scrollContent: { paddingHorizontal: spacing.xl },
+  groupCard: { marginBottom: spacing.sm },
+  groupCardInner: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: '#fff', 
+    padding: spacing.md, 
+    borderRadius: radius.xs,
+    borderWidth: 1,
+    borderColor: '#F3F4F6'
+  },
+  groupIcon: { width: 44, height: 44, backgroundColor: '#F9FAFB', borderRadius: 4, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  groupInfo: { flex: 1 },
+  groupName: { fontSize: normalize(14), fontWeight: '900', color: colors.text, letterSpacing: 0.5 },
+  groupSub: { fontSize: normalize(10), color: '#9CA3AF', fontWeight: '700', marginTop: 2 },
+  emptyState: { 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    paddingVertical: 100,
+    backgroundColor: '#F9FAFB',
+    borderRadius: radius.md,
+    borderStyle: 'dashed',
+    borderWidth: 2,
+    borderColor: '#E5E7EB'
+  },
+  emptyText: { fontSize: normalize(16), fontWeight: '800', color: '#9CA3AF', marginTop: 12 },
+  emptySub: { fontSize: normalize(12), color: '#D1D5DB', textAlign: 'center', marginTop: 8, paddingHorizontal: 40 }
 });

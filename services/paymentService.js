@@ -16,15 +16,16 @@ const paymentsRef = collection(db, 'payments');
 
 const getPaymentId = ({ groupId, memberId, monthNumber }) => `${groupId}_${memberId}_${monthNumber}`;
 
-export const updatePaymentStatus = async (groupId, memberId, monthNumber, payload) => {
-  const docId = getPaymentId({ groupId, memberId, monthNumber });
+export const togglePaymentStatus = async ({ groupId, memberId, month, amount, status }) => {
+  const docId = getPaymentId({ groupId, memberId, monthNumber: month });
   return await setDoc(
     doc(db, 'payments', docId),
     {
-      ...payload,
       groupId,
       memberId,
-      monthNumber,
+      monthNumber: month,
+      amount,
+      status,
       updatedAt: serverTimestamp(),
     },
     { merge: true }
@@ -44,6 +45,24 @@ export const subscribePaymentsByGroupAndMonth = (groupId, monthNumber, onUpdate,
     },
     onError
   );
+};
+
+export const subscribeAllPaymentsByMonth = (monthNumber, onUpdate) => {
+  const q = query(paymentsRef, where('monthNumber', '==', monthNumber), where('status', '==', 'paid'));
+  return onSnapshot(q, (snapshot) => {
+    onUpdate(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+  });
+};
+
+export const subscribeRecentTransactions = (onUpdate) => {
+  const q = query(paymentsRef, where('status', '==', 'paid'));
+  return onSnapshot(q, (snapshot) => {
+    // Sort manually as we might not have composite index for orderby + where yet
+    const sorted = snapshot.docs
+      .map(doc => ({ id: doc.id, ...doc.data() }))
+      .sort((a, b) => (b.updatedAt?.seconds || 0) - (a.updatedAt?.seconds || 0));
+    onUpdate(sorted.slice(0, 50));
+  });
 };
 
 export const getDashboardStats = async (currentMonthNumber) => {
