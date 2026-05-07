@@ -103,7 +103,7 @@ export default function ProfileScreen({ navigation }) {
                 <Text style={styles.detailValue}>{user.pin}</Text>
               </View>
               <View style={styles.detailCard}>
-                <Text style={styles.detailLabel}>GROUPS CREATED</Text>
+                <Text style={styles.detailLabel}>GROUPS</Text>
                 <Text style={styles.detailValue}>{user.groupsCount}</Text>
               </View>
             </View>
@@ -115,10 +115,10 @@ export default function ProfileScreen({ navigation }) {
             style={({ pressed }) => [styles.logoutButton, pressed && styles.logoutButtonPressed]}
             onPress={handleLogout}
           >
-            <Text style={styles.logoutText}>TERMINATE SESSION</Text>
+            <Text style={styles.logoutText}>Log Out</Text>
             <MaterialCommunityIcons name="logout" size={20} color={colors.white} />
           </Pressable>
-          <Text style={styles.note}>End your session to secure your data.</Text>
+          <Text style={styles.note}>End your session</Text>
         </View>
       </Animated.View>
     </View>
