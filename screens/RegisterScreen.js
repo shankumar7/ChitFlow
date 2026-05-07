@@ -96,8 +96,8 @@ export default function AuthScreen({ navigation }) {
     }
   };
 
-  const BrandTitle = ({ scale = 1 }) => (
-    <View style={[styles.brandTitleContainer, { transform: [{ scale }] }]}>
+  const BrandTitle = () => (
+    <View style={styles.brandTitleContainer}>
       <Text style={styles.titleHeavy}>Chit</Text>
       <Text style={styles.titleLight}>Flow</Text>
     </View>
@@ -236,7 +236,18 @@ const styles = StyleSheet.create({
   modeBtnActive: { backgroundColor: colors.text },
   modeText: { fontSize: normalize(10), fontWeight: '900', color: '#9CA3AF', letterSpacing: 1 },
   modeTextActive: { color: colors.white },
-  logoWrap: { width: normalize(60), height: normalize(60), backgroundColor: '#fff', borderRadius: 8, marginBottom: spacing.md, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, padding: 8 },
+  logoWrap: { 
+    width: normalize(60), 
+    height: normalize(60), 
+    backgroundColor: '#fff', 
+    borderRadius: 8, 
+    marginBottom: spacing.md, 
+    padding: 8,
+    ...Platform.select({
+      web: { boxShadow: '0 2px 4px rgba(0,0,0,0.1)' },
+      default: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 2 }
+    })
+  },
   logoWrapSuccess: { width: normalize(44), height: normalize(44), backgroundColor: '#fff', borderRadius: 6, marginBottom: spacing.xl, padding: 6, borderWidth: 1, borderColor: '#F3F4F6' },
   logo: { width: '100%', height: '100%', resizeMode: 'contain' },
   step: { fontSize: normalize(10), fontWeight: '900', color: '#9CA3AF', letterSpacing: 2, marginBottom: 12 },
