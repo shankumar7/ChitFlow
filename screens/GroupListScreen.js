@@ -40,6 +40,9 @@ export default function GroupListScreen({ navigation }) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const fabAnim = useRef(new Animated.Value(0)).current;
 
+  // Smart fallback for status bar height
+  const safeTop = insets.top || StatusBar.currentHeight || 30;
+
   useEffect(() => {
     const unsubscribe = subscribeGroups((data) => {
       setGroups(data);
@@ -52,22 +55,23 @@ export default function GroupListScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <StatusBar translucent={false} backgroundColor="white" barStyle="dark-content" />
+      <StatusBar translucent={true} backgroundColor="transparent" barStyle="dark-content" />
+      
       <View style={styles.verticalSpine} />
       
-      <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
-        <Text style={styles.step}>CHITTI ARCHITECTURE</Text>
-        <View style={styles.brandTitleContainer}>
-          <Text style={styles.titleHeavy}>All</Text>
-          <Text style={styles.titleLight}>Groups</Text>
-        </View>
-      </View>
-
       <ScrollView 
         style={styles.scrollView} 
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 120 }]}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: safeTop + 20, paddingBottom: insets.bottom + 120 }]}
         showsVerticalScrollIndicator={false}
       >
+        <View style={styles.header}>
+          <Text style={styles.step}>CHITTI GROUP</Text>
+          <View style={styles.brandTitleContainer}>
+            <Text style={styles.titleHeavy}>All</Text>
+            <Text style={styles.titleLight}>Groups</Text>
+          </View>
+        </View>
+
         <View style={styles.section}>
           {loading ? (
             <ActivityIndicator size="large" color={colors.text} style={{ marginTop: 100 }} />
@@ -109,14 +113,25 @@ export default function GroupListScreen({ navigation }) {
           <MaterialCommunityIcons name="plus" size={32} color={colors.white} />
         </Pressable>
       </Animated.View>
+
+      {/* THE ABSOLUTE SHIELD */}
+      <View style={[styles.topBlocker, { height: safeTop }]} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white },
+  topBlocker: { 
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: colors.white, 
+    zIndex: 9999, 
+  },
   verticalSpine: { position: 'absolute', left: spacing.xl + normalize(4), top: 0, bottom: 0, width: 1, backgroundColor: '#F3F4F6' },
-  header: { paddingHorizontal: spacing.xl, marginBottom: spacing.xl },
+  header: { marginBottom: spacing.xl },
   step: { fontSize: normalize(10), fontWeight: '900', color: '#9CA3AF', letterSpacing: 2, marginBottom: 4 },
   brandTitleContainer: { flexDirection: 'row', alignItems: 'baseline', marginLeft: -2 },
   titleHeavy: { fontSize: normalize(44), fontWeight: '900', color: colors.text, letterSpacing: -2 },

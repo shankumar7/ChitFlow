@@ -182,7 +182,7 @@ export default function ProfileScreen({ navigation }) {
         </Animated.View>
       </ScrollView>
 
-      {/* THE ABSOLUTE SHIELD */}
+      {/* THE ABSOLUTE SHIELD: Opaque white cover that content scrolls BEHIND */}
       <View style={[styles.topBlocker, { height: safeTop }]} />
     </View>
   );

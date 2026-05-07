@@ -129,7 +129,7 @@ export default function DashboardScreen({ navigation }) {
         </View>
 
         <Animated.View style={[styles.section, { opacity: fadeAnim }]}>
-          <Text style={styles.sectionLabel}>RECENT ARCHITECTURE</Text>
+          <Text style={styles.sectionLabel}>RECENT GROUPS</Text>
           {loading ? (
             <ActivityIndicator size="small" color={colors.text} style={{ marginTop: 20 }} />
           ) : groups.length > 0 ? (
