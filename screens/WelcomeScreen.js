@@ -8,17 +8,16 @@ export default function WelcomeScreen({ navigation }) {
   const lineWidth = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    const useNative = Platform.OS !== 'web';
     Animated.timing(fadeAnim, {
       toValue: 1,
       duration: 1000,
-      useNativeDriver: useNative,
+      useNativeDriver: false,
     }).start();
 
     Animated.timing(lineWidth, {
       toValue: 1,
       duration: 1500,
-      useNativeDriver: useNative,
+      useNativeDriver: false, // width cannot be animated natively
     }).start();
   }, [fadeAnim, lineWidth]);
 

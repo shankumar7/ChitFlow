@@ -6,14 +6,14 @@ import { db } from '../services/firebase';
 import { colors, spacing, radius, normalize, window, layout } from '../utils/theme';
 
 export default function AuthScreen({ navigation }) {
-  const [mode, setMode] = useState('REGISTER'); 
+  const [mode, setMode] = useState('REGISTER');
   const [name, setName] = useState('');
   const [pin, setPin] = useState('');
   const [loading, setLoading] = useState(false);
   const [successUser, setSuccessUser] = useState(null);
   const [generatedPin, setGeneratedPin] = useState(null);
   const [isSuccess, setIsSuccess] = useState(false);
-  
+
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -29,7 +29,7 @@ export default function AuthScreen({ navigation }) {
   const handleAuth = async () => {
     if (mode === 'REGISTER' && !name.trim()) return;
     if (mode === 'LOGIN' && !pin.trim()) return;
-    
+
     setLoading(true);
 
     try {
@@ -47,7 +47,7 @@ export default function AuthScreen({ navigation }) {
         const userData = querySnapshot.docs[0].data();
         await AsyncStorage.setItem('user_name', userData.name);
         await AsyncStorage.setItem('user_pin', userData.pin);
-        
+
         setSuccessUser(userData.name);
         setIsSuccess(true);
       } else {
@@ -112,18 +112,17 @@ export default function AuthScreen({ navigation }) {
             <View style={styles.logoWrapSuccess}>
               <Image source={require('../assets/icon.png')} style={styles.logo} />
             </View>
-            <Text style={styles.step}>AUTHENTICATION SUCCESS</Text>
             <Text style={styles.welcomeText}>Welcome,</Text>
-            <Text 
-              style={styles.userNameReveal} 
-              numberOfLines={1} 
+            <Text
+              style={styles.userNameReveal}
+              numberOfLines={1}
               adjustsFontSizeToFit
             >
               {(successUser || name).toUpperCase()}
             </Text>
             <View style={styles.revealBar} />
           </View>
-          
+
           {generatedPin ? (
             <View style={styles.pinDisplay}>
               <Text style={styles.pinLabel}>YOUR SECURITY PIN</Text>
@@ -138,8 +137,8 @@ export default function AuthScreen({ navigation }) {
           )}
 
           <View style={styles.bottomSection}>
-            <Pressable 
-              style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]} 
+            <Pressable
+              style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
               onPress={() => navigation.replace('Dashboard')}
             >
               <View style={styles.buttonContent}>
@@ -207,8 +206,8 @@ export default function AuthScreen({ navigation }) {
         </View>
 
         <View style={styles.bottomSection}>
-          <Pressable 
-            style={({ pressed }) => [styles.button, pressed && styles.buttonPressed, (mode === 'REGISTER' ? !name.trim() : !pin.trim()) && styles.buttonDisabled]} 
+          <Pressable
+            style={({ pressed }) => [styles.button, pressed && styles.buttonPressed, (mode === 'REGISTER' ? !name.trim() : !pin.trim()) && styles.buttonDisabled]}
             onPress={handleAuth}
             disabled={loading || (mode === 'REGISTER' ? !name.trim() : !pin.trim())}
           >
@@ -236,12 +235,12 @@ const styles = StyleSheet.create({
   modeBtnActive: { backgroundColor: colors.text },
   modeText: { fontSize: normalize(10), fontWeight: '900', color: '#9CA3AF', letterSpacing: 1 },
   modeTextActive: { color: colors.white },
-  logoWrap: { 
-    width: normalize(60), 
-    height: normalize(60), 
-    backgroundColor: '#fff', 
-    borderRadius: 8, 
-    marginBottom: spacing.md, 
+  logoWrap: {
+    width: normalize(60),
+    height: normalize(60),
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    marginBottom: spacing.md,
     padding: 8,
     ...Platform.select({
       web: { boxShadow: '0 2px 4px rgba(0,0,0,0.1)' },
@@ -270,12 +269,12 @@ const styles = StyleSheet.create({
   pinValue: { fontSize: normalize(80), fontWeight: '900', color: colors.text, letterSpacing: 8 },
   pinNote: { fontSize: normalize(12), color: '#9CA3AF', fontWeight: '700', lineHeight: 18, marginTop: spacing.xl, maxWidth: '80%' },
   bottomSection: { alignItems: 'flex-start' },
-  button: { 
-    backgroundColor: colors.text, 
-    paddingVertical: normalize(22), 
-    paddingHorizontal: normalize(32), 
-    borderRadius: radius.xs, 
-    width: '100%', 
+  button: {
+    backgroundColor: colors.text,
+    paddingVertical: normalize(22),
+    paddingHorizontal: normalize(32),
+    borderRadius: radius.xs,
+    width: '100%',
     alignItems: 'center',
     ...Platform.select({ web: { outlineStyle: 'none', cursor: 'pointer' } })
   },

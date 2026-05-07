@@ -3,12 +3,14 @@ import { StyleSheet, Text, View, Pressable, Platform, Animated, Alert, ActivityI
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
+import * as Updates from 'expo-updates';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors, spacing, radius, normalize, window, layout } from '../utils/theme';
 
 export default function ProfileScreen({ navigation }) {
   const [user, setUser] = useState({ name: '', pin: '', groupsCount: 0 });
   const [loading, setLoading] = useState(true);
+  const [updateStatus, setUpdateStatus] = useState('LATEST'); // LATEST, CHECKING, DOWNLOADING, READY
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -19,15 +21,15 @@ export default function ProfileScreen({ navigation }) {
     try {
       const storedName = await AsyncStorage.getItem('user_name');
       const storedPin = await AsyncStorage.getItem('user_pin');
-
+      
       if (storedName) {
         const userRef = doc(db, 'users', storedName.toLowerCase());
         const userSnap = await getDoc(userRef);
-
+        
         if (userSnap.exists()) {
           const userData = userSnap.data();
-          setUser({
-            name: userData.name || storedName,
+          setUser({ 
+            name: userData.name || storedName, 
             pin: userData.pin || storedPin,
             groupsCount: userData.groups?.length || 0
           });
@@ -49,14 +51,47 @@ export default function ProfileScreen({ navigation }) {
     }
   };
 
+  const onCheckForUpdate = async () => {
+    if (Platform.OS === 'web') {
+      Alert.alert("Web Version", "You are always on the latest version on the web.");
+      return;
+    }
+
+    try {
+      setUpdateStatus('CHECKING');
+      const update = await Updates.checkForUpdateAsync();
+      
+      if (update.isAvailable) {
+        setUpdateStatus('DOWNLOADING');
+        await Updates.fetchUpdateAsync();
+        setUpdateStatus('READY');
+        Alert.alert(
+          "Update Ready", 
+          "New version downloaded. Install the update now to apply changes.",
+          [{ text: "INSTALL", onPress: () => Updates.reloadAsync() }]
+        );
+      } else {
+        setUpdateStatus('LATEST');
+        Alert.alert("Up to Date", "You are already using the latest version of ChitFlow.");
+      }
+    } catch (e) {
+      console.error("Update check failed:", e);
+      setUpdateStatus('LATEST');
+      // In Expo Go or Dev mode, Updates might fail if not configured
+      if (__DEV__) {
+        Alert.alert("Dev Mode", "OTA Updates are only active in production builds. You're good to go!");
+      }
+    }
+  };
+
   const handleLogout = async () => {
     Alert.alert(
       "Logout",
       "Are you sure you want to exit your session?",
       [
         { text: "Cancel", style: "cancel" },
-        {
-          text: "Logout",
+        { 
+          text: "Logout", 
           onPress: async () => {
             await AsyncStorage.clear();
             navigation.reset({ index: 0, routes: [{ name: 'Welcome' }] });
@@ -75,7 +110,7 @@ export default function ProfileScreen({ navigation }) {
           <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
             <MaterialCommunityIcons name="arrow-left" size={24} color={colors.text} />
           </Pressable>
-          <Text style={styles.step}>ACCOUNT</Text>
+          <Text style={styles.step}>ACCOUNT HUB</Text>
           <View style={styles.brandTitleContainer}>
             <Text style={styles.titleHeavy}>Chit</Text>
             <Text style={styles.titleLight}>Flow</Text>
@@ -107,11 +142,37 @@ export default function ProfileScreen({ navigation }) {
                 <Text style={styles.detailValue}>{user.groupsCount}</Text>
               </View>
             </View>
+
+            <View style={styles.versionHub}>
+              <View style={styles.versionHeader}>
+                <Text style={styles.label}>VERSION DIAGNOSTICS</Text>
+                <View style={[styles.statusTag, updateStatus === 'READY' && styles.statusTagReady]}>
+                  <Text style={styles.statusText}>{updateStatus}</Text>
+                </View>
+              </View>
+              <View style={styles.versionCard}>
+                <View style={styles.versionInfo}>
+                  <Text style={styles.buildLabel}>CURRENT BUILD</Text>
+                  <Text style={styles.buildValue}>v1.0.2-STABLE</Text>
+                </View>
+                <Pressable 
+                  style={[styles.updateBtn, (updateStatus === 'CHECKING' || updateStatus === 'DOWNLOADING') && styles.updateBtnDisabled]} 
+                  onPress={updateStatus === 'READY' ? () => Updates.reloadAsync() : onCheckForUpdate}
+                  disabled={updateStatus === 'CHECKING' || updateStatus === 'DOWNLOADING'}
+                >
+                  {updateStatus === 'CHECKING' || updateStatus === 'DOWNLOADING' ? (
+                    <ActivityIndicator size="small" color={colors.white} />
+                  ) : (
+                    <Text style={styles.updateBtnText}>{updateStatus === 'READY' ? 'INSTALL' : 'CHECK'}</Text>
+                  )}
+                </Pressable>
+              </View>
+            </View>
           </>
         )}
 
         <View style={styles.bottomSection}>
-          <Pressable
+          <Pressable 
             style={({ pressed }) => [styles.logoutButton, pressed && styles.logoutButtonPressed]}
             onPress={handleLogout}
           >
@@ -137,13 +198,13 @@ const styles = StyleSheet.create({
   titleLight: { fontSize: normalize(44), fontWeight: '200', color: colors.text, letterSpacing: -1 },
   loaderWrap: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   profileSection: { marginVertical: spacing.xl },
-  avatarWrap: {
-    width: normalize(70),
-    height: normalize(70),
-    backgroundColor: colors.text,
-    borderRadius: radius.xs,
-    justifyContent: 'center',
-    alignItems: 'center',
+  avatarWrap: { 
+    width: normalize(70), 
+    height: normalize(70), 
+    backgroundColor: colors.text, 
+    borderRadius: radius.xs, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
     marginBottom: spacing.lg,
     ...Platform.select({
       web: { boxShadow: '0 8px 20px rgba(0,0,0,0.15)' },
@@ -157,6 +218,18 @@ const styles = StyleSheet.create({
   detailCard: { flex: 1, backgroundColor: '#F9FAFB', padding: spacing.md, borderRadius: radius.xs },
   detailLabel: { fontSize: normalize(8), fontWeight: '900', color: '#9CA3AF', letterSpacing: 1, marginBottom: 8 },
   detailValue: { fontSize: normalize(18), fontWeight: '900', color: colors.text, letterSpacing: 1 },
+  versionHub: { marginVertical: spacing.xl },
+  versionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  statusTag: { backgroundColor: '#10B981', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 },
+  statusTagReady: { backgroundColor: '#3B82F6' },
+  statusText: { color: colors.white, fontSize: normalize(8), fontWeight: '900', letterSpacing: 1 },
+  versionCard: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F9FAFB', padding: spacing.md, borderRadius: radius.xs, borderLeftWidth: 3, borderLeftColor: '#10B981' },
+  versionInfo: { flex: 1 },
+  buildLabel: { fontSize: normalize(8), fontWeight: '900', color: '#9CA3AF', letterSpacing: 1, marginBottom: 2 },
+  buildValue: { fontSize: normalize(14), fontWeight: '900', color: colors.text },
+  updateBtn: { backgroundColor: colors.text, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 4, minWidth: 80, alignItems: 'center' },
+  updateBtnDisabled: { opacity: 0.5 },
+  updateBtnText: { color: colors.white, fontSize: normalize(10), fontWeight: '900', letterSpacing: 1 },
   bottomSection: { marginTop: 'auto' },
   logoutButton: { backgroundColor: '#EF4444', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, paddingVertical: normalize(18), borderRadius: radius.xs },
   logoutButtonPressed: { opacity: 0.8 },
