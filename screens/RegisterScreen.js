@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { StyleSheet, Text, View, TextInput, Pressable, Platform, Animated, ActivityIndicator } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
@@ -83,7 +84,10 @@ export default function RegisterScreen({ navigation }) {
               style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
               onPress={() => navigation.replace('Dashboard')}
             >
-              <Text style={styles.buttonText}>LET'S GO</Text>
+              <View style={styles.buttonContent}>
+                <Text style={styles.buttonText}>LET'S GO</Text>
+                <MaterialCommunityIcons name="arrow-right" size={20} color={colors.white} />
+              </View>
             </Pressable>
           </View>
         </Animated.View>
@@ -126,7 +130,7 @@ export default function RegisterScreen({ navigation }) {
               onChangeText={setPin}
               keyboardType="numeric"
               maxLength={4}
-              secureTextEntry={false} // Shown for clarity as requested
+              secureTextEntry={false}
             />
             <View style={styles.underline} />
           </View>
@@ -145,7 +149,10 @@ export default function RegisterScreen({ navigation }) {
             {loading ? (
               <ActivityIndicator color={colors.white} />
             ) : (
-              <Text style={styles.buttonText}>CONFIRM</Text>
+              <View style={styles.buttonContent}>
+                <Text style={styles.buttonText}>CONFIRM</Text>
+                <MaterialCommunityIcons name="chevron-right" size={24} color={colors.white} />
+              </View>
             )}
           </Pressable>
         </View>
@@ -195,8 +202,32 @@ const styles = StyleSheet.create({
   pinValue: { fontSize: normalize(80), fontWeight: '900', color: colors.text, letterSpacing: 8 },
   pinNote: { fontSize: normalize(12), color: '#9CA3AF', fontWeight: '700', lineHeight: 18, marginTop: spacing.xl, maxWidth: '80%' },
   bottomSection: { alignItems: 'flex-start' },
-  button: { backgroundColor: colors.text, paddingVertical: normalize(20), paddingHorizontal: normalize(40), borderRadius: radius.xs, width: '100%', alignItems: 'center' },
-  buttonPressed: { opacity: 0.9, transform: [{ scale: 0.98 }] },
-  buttonDisabled: { opacity: 0.2 },
-  buttonText: { color: colors.white, fontSize: normalize(18), fontWeight: '900', letterSpacing: 2 },
+  button: { 
+    backgroundColor: colors.text, 
+    paddingVertical: normalize(20), 
+    paddingHorizontal: normalize(32), 
+    borderRadius: radius.xs, 
+    width: '100%', 
+    alignItems: 'center',
+    ...Platform.select({
+      web: { cursor: 'pointer' }
+    })
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  buttonPressed: { 
+    opacity: 0.85, 
+    transform: [{ scale: 0.98 }] 
+  },
+  buttonDisabled: { opacity: 0.1 },
+  buttonText: { 
+    color: colors.white, 
+    fontSize: normalize(16), 
+    fontWeight: '900', 
+    letterSpacing: 4,
+    textTransform: 'uppercase'
+  },
 });
