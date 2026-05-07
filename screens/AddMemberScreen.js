@@ -1,16 +1,49 @@
-import { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, Pressable, Alert } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  StyleSheet, 
+  Text, 
+  View, 
+  TextInput, 
+  Pressable, 
+  Alert, 
+  Animated, 
+  Platform, 
+  StatusBar,
+  ActivityIndicator,
+  ScrollView
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { createMember } from '../services/memberService';
-import { colors, radius, spacing, normalize } from '../utils/theme';
+import { colors, radius, spacing, normalize, layout, window } from '../utils/theme';
 
 export default function AddMemberScreen({ route, navigation }) {
+  const insets = useSafeAreaInsets();
   const { groupId } = route.params;
   const [form, setForm] = useState({ name: '', phone: '' });
   const [loading, setLoading] = useState(false);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(20)).current;
+
+  useEffect(() => {
+    const useNative = Platform.OS !== 'web';
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: useNative,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 800,
+        useNativeDriver: useNative,
+      })
+    ]).start();
+  }, []);
 
   const handleSubmit = async () => {
     if (!form.name || !form.phone) {
-      Alert.alert('Error', 'Please fill all fields');
+      Alert.alert('Incomplete Entry', 'Please provide both the participant name and contact number.');
       return;
     }
     setLoading(true);
@@ -20,67 +53,126 @@ export default function AddMemberScreen({ route, navigation }) {
         name: form.name,
         phone: form.phone,
       });
+      Alert.alert("Success", "New member added to the architecture.");
       navigation.goBack();
     } catch (e) {
-      Alert.alert('Error', 'Failed to add member');
+      Alert.alert('Error', 'Failed to synchronize new member. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <View style={styles.root}>
-      <View style={styles.field}>
-        <Text style={styles.label}>FULL NAME</Text>
-        <TextInput 
-          style={styles.input} 
-          placeholder="e.g. John Doe" 
-          value={form.name} 
-          onChangeText={(v) => setForm({ ...form, name: v })} 
-        />
-      </View>
-
-      <View style={styles.field}>
-        <Text style={styles.label}>PHONE NUMBER</Text>
-        <TextInput 
-          style={styles.input} 
-          placeholder="+91 9876543210" 
-          keyboardType="phone-pad"
-          value={form.phone} 
-          onChangeText={(v) => setForm({ ...form, phone: v })} 
-        />
-      </View>
-
-      <Pressable 
-        style={[styles.button, loading && { opacity: 0.7 }]} 
-        onPress={handleSubmit} 
-        disabled={loading}
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" />
+      <View style={styles.verticalSpine} />
+      
+      <ScrollView 
+        style={styles.scrollView} 
+        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 40 }]}
+        showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.buttonText}>{loading ? 'ADDING...' : 'ADD MEMBER'}</Text>
-      </Pressable>
+        <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
+          <View style={styles.header}>
+            <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
+              <MaterialCommunityIcons name="arrow-left" size={24} color={colors.text} />
+            </Pressable>
+            <Text style={styles.step}>MEMBER INDUCTION</Text>
+            <View style={styles.brandTitleContainer}>
+              <Text style={styles.titleHeavy}>Add</Text>
+              <Text style={styles.titleLight}>Member</Text>
+            </View>
+          </View>
+
+          <View style={styles.form}>
+            <View style={styles.field}>
+              <Text style={styles.label}>FULL IDENTITY NAME</Text>
+              <TextInput 
+                style={styles.input} 
+                placeholder="JOHN DOE" 
+                placeholderTextColor="#D1D5DB"
+                value={form.name} 
+                onChangeText={(v) => setForm({ ...form, name: v })} 
+              />
+              <View style={styles.underline} />
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>CONTACT NUMBER</Text>
+              <TextInput 
+                style={styles.input} 
+                placeholder="+91 90000 00000" 
+                placeholderTextColor="#D1D5DB"
+                keyboardType="phone-pad"
+                value={form.phone} 
+                onChangeText={(v) => setForm({ ...form, phone: v })} 
+              />
+              <View style={styles.underline} />
+            </View>
+
+            <View style={styles.bottomSection}>
+              <Pressable 
+                style={({ pressed }) => [styles.button, pressed && styles.buttonPressed, loading && styles.buttonDisabled]} 
+                onPress={handleSubmit} 
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color={colors.white} />
+                ) : (
+                  <View style={styles.buttonContent}>
+                    <Text style={styles.buttonText}>CONFIRM MEMBER</Text>
+                    <MaterialCommunityIcons name="account-plus" size={20} color={colors.white} />
+                  </View>
+                )}
+              </Pressable>
+              <Text style={styles.note}>This participant will be added to the active group.</Text>
+            </View>
+          </View>
+        </Animated.View>
+      </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg, padding: spacing.xl },
-  field: { marginBottom: spacing.xl },
-  label: { fontSize: normalize(12), fontWeight: '800', color: colors.textLight, letterSpacing: 1, marginBottom: 8 },
+  container: { flex: 1, backgroundColor: colors.white },
+  verticalSpine: { position: 'absolute', left: spacing.xl + normalize(4), top: 0, bottom: 0, width: 1, backgroundColor: '#F3F4F6' },
+  scrollView: { flex: 1 },
+  scrollContent: { paddingHorizontal: spacing.xl, ...layout.container },
+  header: { marginBottom: spacing.xxl },
+  backBtn: { marginBottom: spacing.md, marginLeft: -4 },
+  step: { fontSize: normalize(10), fontWeight: '900', color: '#9CA3AF', letterSpacing: 2, marginBottom: 4 },
+  brandTitleContainer: { flexDirection: 'row', alignItems: 'baseline', marginLeft: -2 },
+  titleHeavy: { fontSize: normalize(44), fontWeight: '900', color: colors.text, letterSpacing: -2 },
+  titleLight: { fontSize: normalize(44), fontWeight: '200', color: colors.text, letterSpacing: -1 },
+  form: { marginVertical: spacing.xl },
+  field: { marginBottom: spacing.xxl },
+  label: { fontSize: normalize(10), fontWeight: '800', color: '#9CA3AF', letterSpacing: 1.5, marginBottom: 8 },
   input: { 
-    backgroundColor: colors.white, 
-    borderRadius: radius.md, 
-    padding: spacing.md, 
-    fontSize: normalize(16), 
-    borderWidth: 1, 
-    borderColor: colors.border,
-    color: colors.text
+    fontSize: normalize(28), 
+    fontWeight: '900', 
+    color: colors.text, 
+    paddingVertical: spacing.sm, 
+    letterSpacing: 1,
+    ...Platform.select({ web: { outlineStyle: 'none' } })
   },
+  underline: { height: 3, backgroundColor: colors.text, width: normalize(40) },
+  bottomSection: { marginTop: spacing.xxl },
   button: { 
-    backgroundColor: colors.primary, 
-    borderRadius: radius.lg, 
-    padding: spacing.md, 
+    backgroundColor: colors.text, 
+    paddingVertical: normalize(20), 
+    borderRadius: radius.xs, 
+    flexDirection: 'row', 
     alignItems: 'center', 
-    marginTop: spacing.xl 
+    justifyContent: 'center',
+    ...Platform.select({
+      web: { boxShadow: '0 8px 24px rgba(0,0,0,0.2)' },
+      default: { shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 12, elevation: 6 }
+    })
   },
-  buttonText: { color: colors.white, fontWeight: '900', fontSize: normalize(16), letterSpacing: 1 }
+  buttonContent: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  buttonText: { color: colors.white, fontSize: normalize(14), fontWeight: '900', letterSpacing: 2 },
+  buttonPressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
+  buttonDisabled: { opacity: 0.6 },
+  note: { fontSize: normalize(10), color: '#9CA3AF', fontWeight: '700', marginTop: 16, textAlign: 'center' }
 });

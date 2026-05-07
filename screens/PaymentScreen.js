@@ -1,25 +1,36 @@
-import { useEffect, useState, useMemo } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
+import { 
+  FlatList, 
+  Pressable, 
+  StyleSheet, 
+  Text, 
+  View, 
+  ActivityIndicator, 
+  Platform, 
+  StatusBar,
+  Animated 
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { subscribeMembersByGroup } from '../services/memberService';
-import { subscribePaymentsByGroupAndMonth } from '../services/paymentService';
+import { subscribePaymentsByGroupAndMonth, togglePaymentStatus } from '../services/paymentService';
 import { getCurrentMonthNumber, getMonthName } from '../utils/date';
-import MemberPaymentRow from '../components/MemberPaymentRow';
-import SummaryCard from '../components/SummaryCard';
-import EmptyState from '../components/EmptyState';
-import { colors, spacing, normalize, layout } from '../utils/theme';
+import { colors, spacing, radius, normalize, layout, window } from '../utils/theme';
 
-export default function PaymentScreen({ route }) {
+export default function PaymentScreen({ route, navigation }) {
+  const insets = useSafeAreaInsets();
   const { groupId, groupName, monthlyAmount } = route.params;
   const [members, setMembers] = useState([]);
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentMonth, setCurrentMonth] = useState(getCurrentMonthNumber());
+  const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const unsubMembers = subscribeMembersByGroup(groupId, (data) => {
       setMembers(data);
       setLoading(false);
+      Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }).start();
     });
 
     const unsubPayments = subscribePaymentsByGroupAndMonth(groupId, currentMonth, (data) => {
@@ -56,58 +67,187 @@ export default function PaymentScreen({ route }) {
     });
   };
 
-  if (loading) return <View style={styles.center}><ActivityIndicator color={colors.primary} /></View>;
+  const handleToggle = async (memberId) => {
+    const existing = payments.find(p => p.memberId === memberId);
+    await togglePaymentStatus({
+      groupId,
+      memberId,
+      month: currentMonth,
+      amount: monthlyAmount,
+      status: existing?.status === 'paid' ? 'unpaid' : 'paid'
+    });
+  };
+
+  const renderPaymentRow = ({ item, index }) => {
+    const payment = payments.find(p => p.memberId === item.id);
+    const isPaid = payment?.status === 'paid';
+
+    return (
+      <Animated.View style={[styles.card, { opacity: fadeAnim, transform: [{ translateY: fadeAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [20 * (index + 1), 0]
+      }) }] }]}>
+        <View style={styles.cardContent}>
+          <View style={[styles.statusIndicator, { backgroundColor: isPaid ? '#10B981' : '#F3F4F6' }]} />
+          <View style={styles.info}>
+            <Text style={styles.name}>{item.name.toUpperCase()}</Text>
+            <Text style={styles.amount}>₹ {monthlyAmount.toLocaleString()}</Text>
+          </View>
+          <Pressable 
+            style={({ pressed }) => [
+              styles.actionBtn, 
+              isPaid ? styles.actionBtnPaid : styles.actionBtnUnpaid,
+              pressed && { opacity: 0.7 }
+            ]}
+            onPress={() => handleToggle(item.id)}
+          >
+            <MaterialCommunityIcons 
+              name={isPaid ? "check-circle" : "circle-outline"} 
+              size={24} 
+              color={isPaid ? colors.white : "#9CA3AF"} 
+            />
+            <Text style={[styles.actionText, { color: isPaid ? colors.white : "#9CA3AF" }]}>
+              {isPaid ? 'PAID' : 'PENDING'}
+            </Text>
+          </Pressable>
+        </View>
+      </Animated.View>
+    );
+  };
 
   return (
-    <View style={styles.root}>
-      <View style={styles.monthPicker}>
-        <Pressable onPress={() => changeMonth(-1)} style={styles.monthArrow}>
-          <MaterialCommunityIcons name="chevron-left" size={24} color={colors.primary} />
-        </Pressable>
-        <Text style={styles.monthText}>{monthLabel}</Text>
-        <Pressable onPress={() => changeMonth(1)} style={styles.monthArrow}>
-          <MaterialCommunityIcons name="chevron-right" size={24} color={colors.primary} />
-        </Pressable>
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" />
+      <View style={styles.verticalSpine} />
+      
+      <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
+        <View style={styles.headerTop}>
+          <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <MaterialCommunityIcons name="arrow-left" size={24} color={colors.text} />
+          </Pressable>
+          <Text style={styles.step}>PAYMENT LEDGER</Text>
+          <View style={styles.brandTitleContainer}>
+            <Text style={styles.titleHeavy}>Track</Text>
+            <Text style={styles.titleLight}>Flow</Text>
+          </View>
+        </View>
+
+        <View style={styles.monthPicker}>
+          <Pressable onPress={() => changeMonth(-1)} style={styles.monthArrow}>
+            <MaterialCommunityIcons name="chevron-left" size={24} color={colors.text} />
+          </Pressable>
+          <Text style={styles.monthText}>{monthLabel.toUpperCase()}</Text>
+          <Pressable onPress={() => changeMonth(1)} style={styles.monthArrow}>
+            <MaterialCommunityIcons name="chevron-right" size={24} color={colors.text} />
+          </Pressable>
+        </View>
       </View>
 
       <FlatList
         data={members}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
-        ListHeaderComponent={<SummaryCard summary={summary} />}
-        ListEmptyComponent={
-          <EmptyState 
-            title="No members" 
-            subtitle="Add members to this group to start tracking payments." 
-            icon="account-off-outline"
-          />
+        contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 40 }]}
+        showsVerticalScrollIndicator={false}
+        ListHeaderComponent={
+          <View style={styles.summaryBox}>
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryLabel}>COLLECTED</Text>
+              <Text style={styles.summaryValue}>₹ {summary.totalCollected.toLocaleString()}</Text>
+            </View>
+            <View style={styles.summaryDivider} />
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryLabel}>PAID</Text>
+              <Text style={styles.summaryValue}>{summary.paidCount}/{summary.totalMembers}</Text>
+            </View>
+          </View>
         }
-        renderItem={({ item }) => (
-          <MemberPaymentRow 
-            member={item} 
-            groupId={groupId} 
-            month={currentMonth} 
-          />
-        )}
+        renderItem={renderPaymentRow}
+        ListEmptyComponent={
+          !loading && (
+            <View style={styles.emptyState}>
+              <MaterialCommunityIcons name="cash-off" size={48} color="#E5E7EB" />
+              <Text style={styles.emptyText}>No Entries</Text>
+              <Text style={styles.emptySub}>Add members to start the tracking cycle.</Text>
+            </View>
+          )
+        }
       />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  container: { flex: 1, backgroundColor: colors.white },
+  verticalSpine: { position: 'absolute', left: spacing.xl + normalize(4), top: 0, bottom: 0, width: 1, backgroundColor: '#F3F4F6' },
+  header: { paddingHorizontal: spacing.xl, marginBottom: spacing.lg },
+  headerTop: { marginBottom: spacing.lg },
+  backBtn: { marginBottom: spacing.md, marginLeft: -4 },
+  step: { fontSize: normalize(10), fontWeight: '900', color: '#9CA3AF', letterSpacing: 2, marginBottom: 4 },
+  brandTitleContainer: { flexDirection: 'row', alignItems: 'baseline', marginLeft: -2 },
+  titleHeavy: { fontSize: normalize(44), fontWeight: '900', color: colors.text, letterSpacing: -2 },
+  titleLight: { fontSize: normalize(44), fontWeight: '200', color: colors.text, letterSpacing: -1 },
   monthPicker: { 
-    ...layout.container,
     flexDirection: 'row', 
     alignItems: 'center', 
-    justifyContent: 'space-between', 
-    padding: spacing.md, 
-    backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border
+    justifyContent: 'space-between',
+    backgroundColor: '#F9FAFB',
+    borderRadius: radius.xs,
+    padding: spacing.xs,
+    borderWidth: 1,
+    borderColor: '#F3F4F6'
   },
-  monthArrow: { padding: 8 },
-  monthText: { fontSize: normalize(16), fontWeight: '900', color: colors.text, textTransform: 'uppercase' },
-  list: { ...layout.container, padding: spacing.md, paddingBottom: 100 }
+  monthArrow: { padding: 10 },
+  monthText: { fontSize: normalize(12), fontWeight: '900', color: colors.text, letterSpacing: 1 },
+  summaryBox: { 
+    flexDirection: 'row', 
+    backgroundColor: colors.text, 
+    borderRadius: radius.xs, 
+    padding: spacing.lg, 
+    marginBottom: spacing.xl,
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  },
+  summaryItem: { flex: 1, alignItems: 'center' },
+  summaryLabel: { fontSize: normalize(8), fontWeight: '900', color: '#9CA3AF', letterSpacing: 2, marginBottom: 4 },
+  summaryValue: { fontSize: normalize(20), fontWeight: '900', color: colors.white, letterSpacing: -0.5 },
+  summaryDivider: { width: 1, height: 24, backgroundColor: '#374151' },
+  list: { paddingHorizontal: spacing.xl },
+  card: { 
+    backgroundColor: '#fff', 
+    padding: spacing.md, 
+    borderRadius: radius.xs, 
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: '#F3F4F6'
+  },
+  cardContent: { flexDirection: 'row', alignItems: 'center' },
+  statusIndicator: { width: 4, height: 32, borderRadius: 2, marginRight: 12 },
+  info: { flex: 1 },
+  name: { fontSize: normalize(12), fontWeight: '900', color: colors.text, letterSpacing: 0.5 },
+  amount: { fontSize: normalize(10), color: '#9CA3AF', fontWeight: '700', marginTop: 2 },
+  actionBtn: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 8, 
+    paddingHorizontal: 12, 
+    paddingVertical: 8, 
+    borderRadius: 4,
+    minWidth: 100,
+    justifyContent: 'center'
+  },
+  actionBtnPaid: { backgroundColor: '#10B981' },
+  actionBtnUnpaid: { backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#F3F4F6' },
+  actionText: { fontSize: normalize(10), fontWeight: '900', letterSpacing: 1 },
+  emptyState: { 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    paddingVertical: 60,
+    backgroundColor: '#F9FAFB', 
+    borderRadius: radius.xs,
+    borderStyle: 'dashed',
+    borderWidth: 2,
+    borderColor: '#E5E7EB'
+  },
+  emptyText: { fontSize: normalize(16), fontWeight: '800', color: '#9CA3AF', marginTop: 12 },
+  emptySub: { fontSize: normalize(12), color: '#D1D5DB', textAlign: 'center', marginTop: 8 }
 });

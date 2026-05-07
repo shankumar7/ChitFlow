@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   StyleSheet, 
   Text, 
@@ -8,12 +8,15 @@ import {
   Animated, 
   Platform, 
   StatusBar,
-  SafeAreaView,
   Alert,
-  BackHandler
+  BackHandler,
+  ActivityIndicator
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { subscribeGroups } from '../services/groupService';
 import { colors, spacing, radius, normalize, window, layout } from '../utils/theme';
 
 const SummaryCard = ({ title, value, icon, color, opacity, translateY }) => (
@@ -26,130 +29,156 @@ const SummaryCard = ({ title, value, icon, color, opacity, translateY }) => (
   </Animated.View>
 );
 
+const GroupCard = ({ group, onPress, opacity, index }) => (
+  <Animated.View style={[styles.groupCard, { opacity, transform: [{ translateY: opacity.interpolate({
+    inputRange: [0, 1],
+    outputRange: [20 * (index + 1), 0]
+  }) }] }]}>
+    <Pressable onPress={() => onPress(group)} style={styles.groupCardInner}>
+      <View style={styles.groupIcon}>
+        <MaterialCommunityIcons name="folder-outline" size={24} color={colors.text} />
+      </View>
+      <View style={styles.groupInfo}>
+        <Text style={styles.groupName}>{group.name.toUpperCase()}</Text>
+        <Text style={styles.groupSub}>₹ {group.monthlyAmount.toLocaleString()} • {group.duration} MONTHS</Text>
+      </View>
+      <MaterialCommunityIcons name="chevron-right" size={24} color="#D1D5DB" />
+    </Pressable>
+  </Animated.View>
+);
+
 export default function DashboardScreen({ navigation }) {
-  const [userName, setUserName] = useState('');
+  const insets = useSafeAreaInsets();
+  const [groups, setGroups] = useState([]);
+  const [loading, setLoading] = useState(true);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
   const fabAnim = useRef(new Animated.Value(0)).current;
 
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        // Only restrict back press on Dashboard itself
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener(
+        'hardwareBackPress',
+        onBackPress
+      );
+
+      return () => subscription.remove();
+    }, [])
+  );
+
   useEffect(() => {
-    loadUser();
-    startAnimations();
+    const unsubscribe = subscribeGroups((data) => {
+      setGroups(data);
+      setLoading(false);
+      startAnimations();
+    });
 
-    const backAction = () => {
-      // Prevent going back to Welcome/Register
-      return true; 
+    return () => {
+      unsubscribe();
     };
-
-    const backHandler = BackHandler.addEventListener(
-      "hardwareBackPress",
-      backAction
-    );
-
-    return () => backHandler.remove();
   }, []);
-
-  const loadUser = async () => {
-    const name = await AsyncStorage.getItem('user_name');
-    setUserName(name || 'User');
-  };
 
   const startAnimations = () => {
     const useNative = Platform.OS !== 'web';
-    
     Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 800,
-        useNativeDriver: useNative,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 800,
-        useNativeDriver: useNative,
-      }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: useNative }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 800, useNativeDriver: useNative }),
       Animated.delay(400).start(() => {
-        Animated.spring(fabAnim, {
-          toValue: 1,
-          friction: 4,
-          tension: 40,
-          useNativeDriver: useNative,
-        }).start();
+        Animated.spring(fabAnim, { toValue: 1, friction: 4, tension: 40, useNativeDriver: useNative }).start();
       })
     ]).start();
   };
 
+  const totalValue = groups.reduce((sum, g) => sum + (g.monthlyAmount || 0), 0);
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.white }]}>
       <StatusBar barStyle="dark-content" />
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.verticalSpine} />
-        
-        <View style={styles.header}>
-          <View style={styles.brandContainer}>
-            <Text style={styles.titleHeavy}>Chit</Text>
-            <Text style={styles.titleLight}>Flow</Text>
-          </View>
-          <Pressable 
-            onPress={() => navigation.navigate('Profile')}
-            style={({ pressed }) => [styles.profileBtn, pressed && styles.profileBtnPressed]}
-          >
-            <MaterialCommunityIcons name="account-circle-outline" size={32} color={colors.text} />
-          </Pressable>
+      <View style={styles.verticalSpine} />
+      
+      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
+        <View style={styles.brandContainer}>
+          <Text style={styles.titleHeavy}>Chit</Text>
+          <Text style={styles.titleLight}>Flow</Text>
+        </View>
+        <Pressable 
+          onPress={() => navigation.navigate('Profile')}
+          style={({ pressed }) => [styles.profileBtn, pressed && styles.profileBtnPressed]}
+        >
+          <MaterialCommunityIcons name="account-circle-outline" size={32} color={colors.text} />
+        </Pressable>
+      </View>
+
+      <ScrollView 
+        style={styles.scrollView} 
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 120 }]}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.summaryGrid}>
+          <SummaryCard title="MONTHLY FLOW" value={`₹ ${totalValue.toLocaleString()}`} icon="trending-up" color="#10B981" opacity={fadeAnim} translateY={slideAnim} />
+          <SummaryCard title="ACTIVE GROUPS" value={groups.length.toString()} icon="layers-outline" color="#3B82F6" opacity={fadeAnim} translateY={slideAnim} />
         </View>
 
-        <ScrollView 
-          style={styles.scrollView} 
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.summaryGrid}>
-            <SummaryCard title="TOTAL CHIT VALUE" value="₹ 0.00" icon="wallet-outline" color="#10B981" opacity={fadeAnim} translateY={slideAnim} />
-            <SummaryCard title="ACTIVE GROUPS" value="0" icon="account-group-outline" color="#3B82F6" opacity={fadeAnim} translateY={slideAnim} />
-          </View>
-
-          <Animated.View style={[styles.section, { opacity: fadeAnim }]}>
-            <Text style={styles.sectionLabel}>RECENT ACTIVITY</Text>
+        <Animated.View style={[styles.section, { opacity: fadeAnim }]}>
+          <Text style={styles.sectionLabel}>YOUR ARCHITECTURE</Text>
+          {loading ? (
+            <ActivityIndicator size="small" color={colors.text} style={{ marginTop: 20 }} />
+          ) : groups.length > 0 ? (
+            groups.map((group, index) => (
+              <GroupCard 
+                key={group.id} 
+                group={group} 
+                index={index}
+                opacity={fadeAnim}
+                onPress={() => navigation.navigate('MemberList', { groupId: group.id, groupName: group.name, monthlyAmount: group.monthlyAmount })} 
+              />
+            ))
+          ) : (
             <View style={styles.emptyState}>
               <MaterialCommunityIcons name="playlist-remove" size={48} color="#E5E7EB" />
-              <Text style={styles.emptyText}>No active chits found</Text>
-              <Text style={styles.emptySub}>Tap the button below to create your first group.</Text>
+              <Text style={styles.emptyText}>Empty Ledger</Text>
+              <Text style={styles.emptySub}>Initialize your first group to start the flow.</Text>
             </View>
-          </Animated.View>
-        </ScrollView>
-
-        <Animated.View style={[
-          styles.fabContainer, 
-          { 
-            opacity: fabAnim, 
-            transform: [{ scale: fabAnim }, { translateY: fabAnim.interpolate({
-              inputRange: [0, 1],
-              outputRange: [100, 0]
-            }) }] 
-          }
-        ]}>
-          <Pressable 
-            style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}
-            onPress={() => Alert.alert("Coming Soon", "The Group Creation module is being polished.")}
-          >
-            <MaterialCommunityIcons name="plus" size={32} color={colors.white} />
-          </Pressable>
+          )}
         </Animated.View>
-      </SafeAreaView>
+      </ScrollView>
+
+      <Animated.View style={[
+        styles.fabContainer, 
+        { 
+          bottom: insets.bottom + 20,
+          opacity: fabAnim, 
+          transform: [{ scale: fabAnim }, { translateY: fabAnim.interpolate({
+            inputRange: [0, 1],
+            outputRange: [100, 0]
+          }) }] 
+        }
+      ]}>
+        <Pressable 
+          style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}
+          onPress={() => navigation.navigate('CreateGroup')}
+        >
+          <MaterialCommunityIcons name="plus" size={32} color={colors.white} />
+        </Pressable>
+      </Animated.View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.white },
-  safeArea: { flex: 1 },
+  container: { flex: 1 },
   verticalSpine: { position: 'absolute', left: spacing.xl + normalize(4), top: 0, bottom: 0, width: 1, backgroundColor: '#F3F4F6' },
   header: { 
     flexDirection: 'row', 
     justifyContent: 'space-between', 
     alignItems: 'center', 
     paddingHorizontal: spacing.xl,
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 20 : 10,
+    paddingBottom: spacing.md,
     marginBottom: spacing.xl
   },
   brandContainer: { flexDirection: 'row', alignItems: 'baseline', marginLeft: -2 },
@@ -158,12 +187,12 @@ const styles = StyleSheet.create({
   profileBtn: { padding: 4 },
   profileBtnPressed: { opacity: 0.6 },
   scrollView: { flex: 1 },
-  scrollContent: { paddingHorizontal: spacing.xl, paddingBottom: 160 },
+  scrollContent: { paddingHorizontal: spacing.xl },
   summaryGrid: { gap: spacing.md, marginBottom: spacing.xxl },
   card: { 
     backgroundColor: '#fff', 
     padding: spacing.lg, 
-    borderRadius: radius.md,
+    borderRadius: radius.xs,
     borderWidth: 1,
     borderColor: '#F3F4F6',
     ...Platform.select({
@@ -176,6 +205,20 @@ const styles = StyleSheet.create({
   cardValue: { fontSize: normalize(32), fontWeight: '900', color: colors.text, letterSpacing: -1 },
   section: { marginTop: spacing.xl },
   sectionLabel: { fontSize: normalize(10), fontWeight: '900', color: '#9CA3AF', letterSpacing: 2, marginBottom: spacing.lg },
+  groupCard: { marginBottom: spacing.sm },
+  groupCardInner: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: '#fff', 
+    padding: spacing.md, 
+    borderRadius: radius.xs,
+    borderWidth: 1,
+    borderColor: '#F3F4F6'
+  },
+  groupIcon: { width: 44, height: 44, backgroundColor: '#F9FAFB', borderRadius: 4, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  groupInfo: { flex: 1 },
+  groupName: { fontSize: normalize(14), fontWeight: '900', color: colors.text, letterSpacing: 0.5 },
+  groupSub: { fontSize: normalize(10), color: '#9CA3AF', fontWeight: '700', marginTop: 2 },
   emptyState: { 
     alignItems: 'center', 
     justifyContent: 'center', 
@@ -190,7 +233,6 @@ const styles = StyleSheet.create({
   emptySub: { fontSize: normalize(12), color: '#D1D5DB', textAlign: 'center', marginTop: 8, paddingHorizontal: 40 },
   fabContainer: { 
     position: 'absolute', 
-    bottom: Platform.OS === 'ios' ? 40 : 30, 
     right: spacing.xl,
     zIndex: 100 
   },
