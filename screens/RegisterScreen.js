@@ -1,15 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { StyleSheet, Text, View, TextInput, Pressable, Platform, Animated, ActivityIndicator, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, setDoc, getDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { colors, spacing, radius, normalize, window, layout } from '../utils/theme';
 
 export default function AuthScreen({ navigation }) {
-  const [mode, setMode] = useState('REGISTER'); // 'REGISTER' or 'LOGIN'
+  const [mode, setMode] = useState('REGISTER'); 
   const [name, setName] = useState('');
   const [pin, setPin] = useState('');
   const [loading, setLoading] = useState(false);
+  const [successUser, setSuccessUser] = useState(null);
   const [generatedPin, setGeneratedPin] = useState(null);
   const [isSuccess, setIsSuccess] = useState(false);
   
@@ -26,30 +27,35 @@ export default function AuthScreen({ navigation }) {
   }, [mode, isSuccess]);
 
   const handleAuth = async () => {
-    if (!name.trim()) return;
+    if (mode === 'REGISTER' && !name.trim()) return;
+    if (mode === 'LOGIN' && !pin.trim()) return;
+    
     setLoading(true);
 
     try {
-      const userRef = doc(db, 'users', name.trim().toLowerCase());
-      const userSnap = await getDoc(userRef);
-
       if (mode === 'LOGIN') {
-        if (!userSnap.exists()) {
-          Alert.alert("Account Not Found", "This name is not registered. Please switch to Register.");
+        // PIN-ONLY LOGIN: Search for user by PIN
+        const usersRef = collection(db, 'users');
+        const q = query(usersRef, where("pin", "==", pin.trim()));
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+          Alert.alert("Invalid PIN", "No account found with this security code.");
           setLoading(false);
           return;
         }
 
-        const userData = userSnap.data();
-        if (userData.pin === pin.trim()) {
-          await AsyncStorage.setItem('user_name', name.trim());
-          await AsyncStorage.setItem('user_pin', pin.trim());
-          navigation.replace('Dashboard');
-        } else {
-          Alert.alert("Invalid PIN", "The PIN you entered is incorrect.");
-        }
+        const userData = querySnapshot.docs[0].data();
+        await AsyncStorage.setItem('user_name', userData.name);
+        await AsyncStorage.setItem('user_pin', userData.pin);
+        
+        setSuccessUser(userData.name);
+        setIsSuccess(true);
       } else {
         // REGISTER MODE
+        const userRef = doc(db, 'users', name.trim().toLowerCase());
+        const userSnap = await getDoc(userRef);
+
         if (userSnap.exists()) {
           Alert.alert("Already Exists", "This name is already taken. Please try logging in.");
           setLoading(false);
@@ -79,10 +85,10 @@ export default function AuthScreen({ navigation }) {
 
         if (wasRandom) {
           setGeneratedPin(finalPin);
-          setIsSuccess(true);
         } else {
-          navigation.replace('Dashboard');
+          setSuccessUser(name.trim());
         }
+        setIsSuccess(true);
       }
     } catch (error) {
       console.error("Auth error:", error);
@@ -98,18 +104,22 @@ export default function AuthScreen({ navigation }) {
         <View style={styles.verticalSpine} />
         <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
           <View style={styles.topSection}>
-            <Text style={styles.step}>SUCCESS</Text>
-            <Text style={styles.title}>Welcome,{"\n"}{name}</Text>
+            <Text style={styles.step}>CHITFLOW</Text>
+            <Text style={styles.title}>Welcome,{"\n"}{successUser || name}</Text>
           </View>
-          <View style={styles.pinDisplay}>
-            <Text style={styles.pinLabel}>YOUR SECURITY PIN</Text>
-            <Text style={styles.pinValue}>{generatedPin}</Text>
-            <Text style={styles.pinNote}>PLEASE NOTE THIS DOWN. YOU WILL NEED IT TO LOGIN AGAIN.</Text>
-          </View>
+          
+          {generatedPin && (
+            <View style={styles.pinDisplay}>
+              <Text style={styles.pinLabel}>YOUR SECURITY PIN</Text>
+              <Text style={styles.pinValue}>{generatedPin}</Text>
+              <Text style={styles.pinNote}>PLEASE NOTE THIS DOWN. YOU WILL NEED IT TO LOGIN AGAIN.</Text>
+            </View>
+          )}
+
           <View style={styles.bottomSection}>
             <Pressable style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]} onPress={() => navigation.replace('Dashboard')}>
               <View style={styles.buttonContent}>
-                <Text style={styles.buttonText}>LET'S GO</Text>
+                <Text style={styles.buttonText}>ENTER DASHBOARD</Text>
               </View>
             </Pressable>
           </View>
@@ -132,26 +142,28 @@ export default function AuthScreen({ navigation }) {
             </Pressable>
           </View>
           <Text style={styles.step}>{mode === 'REGISTER' ? 'ONBOARDING' : 'WELCOME BACK'}</Text>
-          <Text style={styles.title}>{mode === 'REGISTER' ? 'Identification' : 'Access Hub'}</Text>
+          <Text style={styles.title}>CHITFLOW</Text>
         </View>
 
         <View style={styles.inputSection}>
-          <View style={styles.field}>
-            <Text style={styles.label}>FULL NAME</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="NAME"
-              placeholderTextColor="#D1D5DB"
-              value={name}
-              onChangeText={setName}
-              autoCapitalize="words"
-              autoFocus
-            />
-            <View style={styles.underline} />
-          </View>
+          {mode === 'REGISTER' && (
+            <View style={styles.field}>
+              <Text style={styles.label}>FULL NAME</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="NAME"
+                placeholderTextColor="#D1D5DB"
+                value={name}
+                onChangeText={setName}
+                autoCapitalize="words"
+                autoFocus
+              />
+              <View style={styles.underline} />
+            </View>
+          )}
 
-          <View style={[styles.field, { marginTop: spacing.xl }]}>
-            <Text style={styles.label}>{mode === 'REGISTER' ? 'SECURITY PIN (OPTIONAL)' : 'SECURITY PIN'}</Text>
+          <View style={[styles.field, { marginTop: mode === 'REGISTER' ? spacing.xl : 0 }]}>
+            <Text style={styles.label}>{mode === 'REGISTER' ? 'SECURITY PIN (OPTIONAL)' : 'ENTER PIN TO ACCESS'}</Text>
             <TextInput
               style={styles.input}
               placeholder="0000"
@@ -160,7 +172,8 @@ export default function AuthScreen({ navigation }) {
               onChangeText={setPin}
               keyboardType="numeric"
               maxLength={4}
-              secureTextEntry={mode === 'LOGIN'}
+              secureTextEntry={false}
+              autoFocus={mode === 'LOGIN'}
             />
             <View style={styles.underline} />
           </View>
@@ -168,9 +181,9 @@ export default function AuthScreen({ navigation }) {
 
         <View style={styles.bottomSection}>
           <Pressable 
-            style={({ pressed }) => [styles.button, pressed && styles.buttonPressed, !name.trim() && styles.buttonDisabled]} 
+            style={({ pressed }) => [styles.button, pressed && styles.buttonPressed, (mode === 'REGISTER' ? !name.trim() : !pin.trim()) && styles.buttonDisabled]} 
             onPress={handleAuth}
-            disabled={loading || !name.trim()}
+            disabled={loading || (mode === 'REGISTER' ? !name.trim() : !pin.trim())}
           >
             {loading ? (
               <ActivityIndicator color={colors.white} />
