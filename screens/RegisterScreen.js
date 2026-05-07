@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { StyleSheet, Text, View, TextInput, Pressable, Platform, Animated, ActivityIndicator, Alert } from 'react-native';
+import { StyleSheet, Text, View, TextInput, Pressable, Platform, Animated, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
@@ -9,27 +9,27 @@ export default function RegisterScreen({ navigation }) {
   const [name, setName] = useState('');
   const [pin, setPin] = useState('');
   const [loading, setLoading] = useState(false);
+  const [generatedPin, setGeneratedPin] = useState(null);
+  const [isSuccess, setIsSuccess] = useState(false);
+  
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const useNative = Platform.OS !== 'web';
     Animated.timing(fadeAnim, {
       toValue: 1,
-      duration: 1000,
+      duration: 800,
       useNativeDriver: useNative,
     }).start();
-  }, [fadeAnim]);
+  }, [fadeAnim, isSuccess]);
 
   const handleRegister = async () => {
     if (!name.trim()) return;
     
-    // Generate random PIN if not provided
     let finalPin = pin.trim();
-    if (!finalPin) {
+    const wasRandom = !finalPin;
+    if (wasRandom) {
       finalPin = Math.floor(1000 + Math.random() * 9000).toString();
-    } else if (finalPin.length !== 4) {
-      Alert.alert("Invalid PIN", "Please provide a 4-digit PIN or leave it blank for a random one.");
-      return;
     }
 
     setLoading(true);
@@ -47,18 +47,49 @@ export default function RegisterScreen({ navigation }) {
       await AsyncStorage.setItem('user_name', name.trim());
       await AsyncStorage.setItem('user_pin', finalPin);
 
-      if (!pin.trim()) {
-        Alert.alert("Profile Created", `Your random security PIN is: ${finalPin}. Please remember it.`);
+      if (wasRandom) {
+        setGeneratedPin(finalPin);
+        setIsSuccess(true);
+        fadeAnim.setValue(0);
+      } else {
+        navigation.replace('Dashboard');
       }
-
-      navigation.replace('Dashboard');
     } catch (error) {
       console.error("Registration error:", error);
-      Alert.alert("Error", "Failed to create profile. Please try again.");
+      alert("Failed to create profile. Please try again.");
     } finally {
       setLoading(false);
     }
   };
+
+  if (isSuccess) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.verticalSpine} />
+        <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
+          <View style={styles.topSection}>
+            <Text style={styles.step}>SUCCESS</Text>
+            <Text style={styles.title}>Welcome,{"\n"}{name}</Text>
+          </View>
+
+          <View style={styles.pinDisplay}>
+            <Text style={styles.pinLabel}>YOUR SECURITY PIN</Text>
+            <Text style={styles.pinValue}>{generatedPin}</Text>
+            <Text style={styles.pinNote}>PLEASE NOTE THIS DOWN. YOU WILL NEED IT TO ACCESS YOUR DATA.</Text>
+          </View>
+
+          <View style={styles.bottomSection}>
+            <Pressable 
+              style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
+              onPress={() => navigation.replace('Dashboard')}
+            >
+              <Text style={styles.buttonText}>LET'S GO</Text>
+            </Pressable>
+          </View>
+        </Animated.View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -95,7 +126,7 @@ export default function RegisterScreen({ navigation }) {
               onChangeText={setPin}
               keyboardType="numeric"
               maxLength={4}
-              secureTextEntry
+              secureTextEntry={false} // Shown for clarity as requested
             />
             <View style={styles.underline} />
           </View>
@@ -159,6 +190,10 @@ const styles = StyleSheet.create({
     })
   },
   underline: { height: 3, backgroundColor: colors.text, width: normalize(40) },
+  pinDisplay: { marginVertical: spacing.xl, alignItems: 'flex-start' },
+  pinLabel: { fontSize: normalize(12), fontWeight: '900', color: '#9CA3AF', letterSpacing: 2, marginBottom: 12 },
+  pinValue: { fontSize: normalize(80), fontWeight: '900', color: colors.text, letterSpacing: 8 },
+  pinNote: { fontSize: normalize(12), color: '#9CA3AF', fontWeight: '700', lineHeight: 18, marginTop: spacing.xl, maxWidth: '80%' },
   bottomSection: { alignItems: 'flex-start' },
   button: { backgroundColor: colors.text, paddingVertical: normalize(20), paddingHorizontal: normalize(40), borderRadius: radius.xs, width: '100%', alignItems: 'center' },
   buttonPressed: { opacity: 0.9, transform: [{ scale: 0.98 }] },
