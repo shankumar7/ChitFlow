@@ -1,5 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, Text, View, Pressable, Platform, Animated, Alert, ActivityIndicator, ScrollView, StatusBar } from 'react-native';
+import { 
+  StyleSheet, 
+  Text, 
+  View, 
+  Pressable, 
+  Platform, 
+  Animated, 
+  Alert, 
+  ActivityIndicator, 
+  ScrollView, 
+  StatusBar 
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { doc, getDoc } from 'firebase/firestore';
@@ -14,7 +25,6 @@ export default function ProfileScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [updateStatus, setUpdateStatus] = useState('LATEST');
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(20)).current;
 
   useEffect(() => {
     loadUser();
@@ -41,19 +51,11 @@ export default function ProfileScreen({ navigation }) {
         }
       }
 
-      const useNative = Platform.OS !== 'web';
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 800,
-          useNativeDriver: useNative,
-        }),
-        Animated.timing(slideAnim, {
-          toValue: 0,
-          duration: 800,
-          useNativeDriver: useNative,
-        })
-      ]).start();
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: Platform.OS !== 'web',
+      }).start();
     } catch (e) {
       console.error(e);
     } finally {
@@ -118,19 +120,21 @@ export default function ProfileScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+      {/* Ensuring the Status Bar is truly solid now that edgeToEdge is disabled */}
+      <StatusBar translucent={false} backgroundColor="white" barStyle="dark-content" />
       <View style={styles.verticalSpine} />
+      
       <ScrollView 
         style={styles.scrollView} 
         contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 40 }]}
         showsVerticalScrollIndicator={false}
       >
-        <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
+        <Animated.View style={{ opacity: fadeAnim }}>
           <View style={styles.header}>
             <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
               <MaterialCommunityIcons name="arrow-left" size={24} color={colors.text} />
             </Pressable>
-            <Text style={styles.step}>ACCOUNT</Text>
+            <Text style={styles.step}>ACCOUNT HUB</Text>
             <View style={styles.brandTitleContainer}>
               <Text style={styles.titleHeavy}>Chit</Text>
               <Text style={styles.titleLight}>Flow</Text>
@@ -194,7 +198,7 @@ export default function ProfileScreen({ navigation }) {
                 </View>
               </View>
               
-              <View style={styles.bottomActions}>
+              <View style={styles.bottomSection}>
                 <Pressable 
                   style={({ pressed }) => [styles.logoutButton, pressed && styles.logoutButtonPressed]}
                   onPress={handleLogout}
@@ -261,7 +265,7 @@ const styles = StyleSheet.create({
     })
   },
   diagCardReady: { borderColor: '#3B82F6', backgroundColor: '#F0F7FF' },
-  diagStatusLine: { width: 4, height: 32, backgroundColor: '#10B981', borderRadius: 2, marginRight: 12 },
+  diagStatusLine: { width: 4, height: '100%', minHeight: 32, backgroundColor: '#10B981', borderRadius: 2, marginRight: 12 },
   diagInfo: { flex: 1 },
   diagRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   diagBuild: { fontSize: normalize(20), fontWeight: '900', color: colors.text, letterSpacing: -0.5 },
@@ -273,7 +277,7 @@ const styles = StyleSheet.create({
   diagBtnPressed: { opacity: 0.8, transform: [{ scale: 0.95 }] },
   diagBtnDisabled: { opacity: 0.5 },
   diagBtnText: { color: colors.white, fontSize: normalize(12), fontWeight: '900', letterSpacing: 2 },
-  bottomActions: { marginTop: spacing.xxl },
+  bottomSection: { marginTop: spacing.xxl },
   logoutButton: { backgroundColor: '#EF4444', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, paddingVertical: normalize(18), borderRadius: radius.xs },
   logoutButtonPressed: { opacity: 0.8 },
   logoutText: { color: colors.white, fontSize: normalize(14), fontWeight: '900', letterSpacing: 2 },

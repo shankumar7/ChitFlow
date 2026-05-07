@@ -52,7 +52,7 @@ export default function GroupListScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar translucent={false} backgroundColor="white" barStyle="dark-content" />
       <View style={styles.verticalSpine} />
       
       <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
