@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between', 
     alignItems: 'center', 
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing.md,
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 20 : 10,
     marginBottom: spacing.xl
   },
   brandContainer: { flexDirection: 'row', alignItems: 'baseline', marginLeft: -2 },
@@ -158,7 +158,7 @@ const styles = StyleSheet.create({
   profileBtn: { padding: 4 },
   profileBtnPressed: { opacity: 0.6 },
   scrollView: { flex: 1 },
-  scrollContent: { paddingHorizontal: spacing.xl, paddingBottom: 120 },
+  scrollContent: { paddingHorizontal: spacing.xl, paddingBottom: 160 },
   summaryGrid: { gap: spacing.md, marginBottom: spacing.xxl },
   card: { 
     backgroundColor: '#fff', 

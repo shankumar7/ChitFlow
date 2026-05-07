@@ -210,7 +210,13 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white },
   safeArea: { flex: 1 },
   verticalSpine: { position: 'absolute', left: spacing.xl + normalize(4), top: 0, bottom: 0, width: 1, backgroundColor: '#F3F4F6' },
-  content: { flex: 1, padding: spacing.xl, paddingVertical: window.height * 0.05, ...layout.container },
+  content: { 
+    flex: 1, 
+    padding: spacing.xl, 
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 30 : 50,
+    paddingBottom: window.height * 0.05,
+    ...layout.container 
+  },
   header: { marginBottom: spacing.xxl },
   backBtn: { marginBottom: spacing.md, marginLeft: -4 },
   step: { fontSize: normalize(10), fontWeight: '900', color: '#9CA3AF', letterSpacing: 2, marginBottom: 4 },

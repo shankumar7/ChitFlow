@@ -70,7 +70,14 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white },
   safeArea: { flex: 1 },
   verticalSpine: { position: 'absolute', left: spacing.xl + normalize(4), top: 0, bottom: 0, width: 1, backgroundColor: '#F3F4F6' },
-  content: { flex: 1, padding: spacing.xl, justifyContent: 'space-between', paddingVertical: window.height * 0.05, ...layout.container },
+  content: { 
+    flex: 1, 
+    padding: spacing.xl, 
+    justifyContent: 'space-between', 
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 30 : 50,
+    paddingBottom: window.height * 0.05,
+    ...layout.container 
+  },
   logoWrap: { 
     width: normalize(80), 
     height: normalize(80), 
