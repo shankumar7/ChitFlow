@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
+import { View, ActivityIndicator, StyleSheet, Platform } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { View, ActivityIndicator, StyleSheet, Platform } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import WelcomeScreen from './screens/WelcomeScreen';
 import RegisterScreen from './screens/RegisterScreen';
 import DashboardScreen from './screens/DashboardScreen';
-import ProfileScreen from './screens/ProfileScreen';
 import GroupListScreen from './screens/GroupListScreen';
+import ProfileScreen from './screens/ProfileScreen';
 import TransactionsScreen from './screens/TransactionsScreen';
 import CreateGroupScreen from './screens/CreateGroupScreen';
 import MemberListScreen from './screens/MemberListScreen';
@@ -33,7 +33,7 @@ function MainTabs() {
           let iconName;
           if (route.name === 'Home') iconName = focused ? 'home' : 'home-outline';
           else if (route.name === 'Groups') iconName = focused ? 'layers' : 'layers-outline';
-          else if (route.name === 'Transactions') iconName = focused ? 'swap-horizontal' : 'swap-horizontal';
+          else if (route.name === 'Ledger') iconName = focused ? 'finance' : 'finance';
           else if (route.name === 'Profile') iconName = focused ? 'account' : 'account-outline';
           return <MaterialCommunityIcons name={iconName} size={24} color={color} />;
         },
@@ -43,7 +43,6 @@ function MainTabs() {
           backgroundColor: '#FFFFFF',
           borderTopWidth: 1,
           borderTopColor: '#F3F4F6',
-          // Dynamic height and padding based on device safe area
           height: Platform.OS === 'ios' ? 60 + insets.bottom : 70 + (insets.bottom > 0 ? insets.bottom : 5),
           paddingBottom: insets.bottom > 0 ? insets.bottom : 12,
           paddingTop: 12,
@@ -62,7 +61,7 @@ function MainTabs() {
     >
       <Tab.Screen name="Home" component={DashboardScreen} />
       <Tab.Screen name="Groups" component={GroupListScreen} />
-      <Tab.Screen name="Transactions" component={TransactionsScreen} />
+      <Tab.Screen name="Ledger" component={TransactionsScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );
@@ -73,10 +72,10 @@ export default function App() {
   const [initialRoute, setInitialRoute] = useState('Welcome');
 
   useEffect(() => {
-    checkSession();
+    checkLogin();
   }, []);
 
-  const checkSession = async () => {
+  const checkLogin = async () => {
     try {
       const storedName = await AsyncStorage.getItem('user_name');
       const storedPin = await AsyncStorage.getItem('user_pin');

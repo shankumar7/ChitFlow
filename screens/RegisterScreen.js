@@ -1,11 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { StyleSheet, Text, View, TextInput, Pressable, Platform, Animated, ActivityIndicator, Alert, Image, SafeAreaView, StatusBar } from 'react-native';
+import { StyleSheet, Text, View, TextInput, Pressable, Platform, Animated, ActivityIndicator, Alert, Image, StatusBar } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { collection, query, where, getDocs, doc, setDoc, getDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { colors, spacing, radius, normalize, window, layout } from '../utils/theme';
 
 export default function AuthScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const [mode, setMode] = useState('REGISTER');
   const [name, setName] = useState('');
   const [pin, setPin] = useState('');
@@ -117,23 +119,30 @@ export default function AuthScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.verticalSpine} />
-        
+      <View style={styles.verticalSpine} />
+      
+      <Animated.View style={[
+        styles.content, 
+        { 
+          opacity: fadeAnim,
+          paddingTop: insets.top + spacing.xl,
+          paddingBottom: insets.bottom + window.height * 0.05
+        }
+      ]}>
         {isSuccess ? (
-          <Animated.View style={[styles.content, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+          <View style={{ flex: 1, justifyContent: 'space-between' }}>
             <View style={styles.topSection}>
               <View style={styles.logoWrapSuccess}>
                 <Image source={require('../assets/icon.png')} style={styles.logo} />
               </View>
               <Text style={styles.welcomeText}>Welcome,</Text>
-              <Text
-                style={styles.userNameReveal}
+              <Animated.Text
+                style={[styles.userNameReveal, { transform: [{ translateY: slideAnim }] }]}
                 numberOfLines={1}
                 adjustsFontSizeToFit
               >
                 {(successUser || name).toUpperCase()}
-              </Text>
+              </Animated.Text>
               <View style={styles.revealBar} />
             </View>
             
@@ -160,9 +169,9 @@ export default function AuthScreen({ navigation }) {
                 </View>
               </Pressable>
             </View>
-          </Animated.View>
+          </View>
         ) : (
-          <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
+          <View style={{ flex: 1, justifyContent: 'space-between' }}>
             <View style={styles.topSection}>
               <View style={styles.modeToggle}>
                 <Pressable onPress={() => setMode('REGISTER')} style={[styles.modeBtn, mode === 'REGISTER' && styles.modeBtnActive]}>
@@ -228,23 +237,19 @@ export default function AuthScreen({ navigation }) {
                 )}
               </Pressable>
             </View>
-          </Animated.View>
+          </View>
         )}
-      </SafeAreaView>
+      </Animated.View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white },
-  safeArea: { flex: 1 },
   verticalSpine: { position: 'absolute', left: spacing.xl + normalize(4), top: 0, bottom: 0, width: 1, backgroundColor: '#F3F4F6' },
   content: { 
     flex: 1, 
     padding: spacing.xl, 
-    justifyContent: 'space-between', 
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 30 : 50,
-    paddingBottom: window.height * 0.05,
     ...layout.container 
   },
   topSection: { alignItems: 'flex-start' },

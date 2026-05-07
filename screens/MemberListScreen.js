@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { subscribeMembers } from '../services/memberService';
+import { subscribeMembersByGroup } from '../services/memberService';
 import { colors, spacing, radius, normalize, layout } from '../utils/theme';
 
 const MemberCard = ({ member, onPress, opacity, index }) => (
@@ -44,7 +44,7 @@ export default function MemberListScreen({ route, navigation }) {
   const safeTop = insets.top || StatusBar.currentHeight || 30;
 
   useEffect(() => {
-    const unsubscribe = subscribeMembers(groupId, (data) => {
+    const unsubscribe = subscribeMembersByGroup(groupId, (data) => {
       setMembers(data);
       setLoading(false);
       Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }).start();

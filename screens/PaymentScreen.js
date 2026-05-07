@@ -8,7 +8,10 @@ import {
   ActivityIndicator, 
   Platform, 
   StatusBar,
-  Animated 
+  Animated,
+  TextInput,
+  Modal,
+  KeyboardAvoidingView
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -25,6 +28,15 @@ export default function PaymentScreen({ route, navigation }) {
   const [loading, setLoading] = useState(true);
   const [currentMonth, setCurrentMonth] = useState(getCurrentMonthNumber());
   const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  // Intake State
+  const [showIntake, setShowIntake] = useState(false);
+  const [selectedMember, setSelectedMember] = useState(null);
+  const [method, setMethod] = useState('cash'); // cash, online
+  const [remarks, setRemarks] = useState('');
+
+  // Smart fallback for status bar height
+  const safeTop = insets.top || StatusBar.currentHeight || 30;
 
   useEffect(() => {
     const unsubMembers = subscribeMembersByGroup(groupId, (data) => {
@@ -48,11 +60,10 @@ export default function PaymentScreen({ route, navigation }) {
     const totalCollected = paidPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
     return {
       totalMembers: members.length,
-      monthlyAmount: monthlyAmount,
       paidCount: paidPayments.length,
       totalCollected,
     };
-  }, [members, payments, monthlyAmount]);
+  }, [members, payments]);
 
   const monthLabel = useMemo(() => {
     return `${getMonthName(currentMonth)} ${new Date().getFullYear()}`;
@@ -67,15 +78,31 @@ export default function PaymentScreen({ route, navigation }) {
     });
   };
 
-  const handleToggle = async (memberId) => {
-    const existing = payments.find(p => p.memberId === memberId);
+  const openIntake = (member) => {
+    const existing = payments.find(p => p.memberId === member.id);
+    if (existing?.status === 'paid') {
+      // Revert to unpaid if already paid (quick toggle)
+      handleConfirm(member.id, 'unpaid');
+    } else {
+      setSelectedMember(member);
+      setMethod('cash');
+      setRemarks('');
+      setShowIntake(true);
+    }
+  };
+
+  const handleConfirm = async (memberId, status = 'paid') => {
     await togglePaymentStatus({
       groupId,
-      memberId,
+      memberId: memberId || selectedMember.id,
       month: currentMonth,
       amount: monthlyAmount,
-      status: existing?.status === 'paid' ? 'unpaid' : 'paid'
+      status,
+      method: status === 'paid' ? method : 'none',
+      remarks: status === 'paid' ? remarks : ''
     });
+    setShowIntake(false);
+    setSelectedMember(null);
   };
 
   const renderPaymentRow = ({ item, index }) => {
@@ -92,6 +119,9 @@ export default function PaymentScreen({ route, navigation }) {
           <View style={styles.info}>
             <Text style={styles.name}>{item.name.toUpperCase()}</Text>
             <Text style={styles.amount}>₹ {monthlyAmount.toLocaleString()}</Text>
+            {isPaid && payment.method && (
+              <Text style={styles.methodTag}>{payment.method.toUpperCase()} {payment.remarks ? `• ${payment.remarks}` : ''}</Text>
+            )}
           </View>
           <Pressable 
             style={({ pressed }) => [
@@ -99,7 +129,7 @@ export default function PaymentScreen({ route, navigation }) {
               isPaid ? styles.actionBtnPaid : styles.actionBtnUnpaid,
               pressed && { opacity: 0.7 }
             ]}
-            onPress={() => handleToggle(item.id)}
+            onPress={() => openIntake(item)}
           >
             <MaterialCommunityIcons 
               name={isPaid ? "check-circle" : "circle-outline"} 
@@ -117,18 +147,18 @@ export default function PaymentScreen({ route, navigation }) {
 
   return (
     <View style={styles.container}>
-      <StatusBar translucent={false} backgroundColor="white" barStyle="dark-content" />
+      <StatusBar translucent={true} backgroundColor="transparent" barStyle="dark-content" />
       <View style={styles.verticalSpine} />
       
-      <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
+      <View style={[styles.header, { paddingTop: safeTop + 20 }]}>
         <View style={styles.headerTop}>
           <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
             <MaterialCommunityIcons name="arrow-left" size={24} color={colors.text} />
           </Pressable>
-          <Text style={styles.step}>PAYMENT LEDGER</Text>
+          <Text style={styles.step}>COLLECTION FEED</Text>
           <View style={styles.brandTitleContainer}>
-            <Text style={styles.titleHeavy}>Track</Text>
-            <Text style={styles.titleLight}>Flow</Text>
+            <Text style={styles.titleHeavy}>{groupName.split(' ')[0]}</Text>
+            <Text style={styles.titleLight}>{groupName.split(' ').slice(1).join(' ') || 'Ledger'}</Text>
           </View>
         </View>
 
@@ -151,12 +181,12 @@ export default function PaymentScreen({ route, navigation }) {
         ListHeaderComponent={
           <View style={styles.summaryBox}>
             <View style={styles.summaryItem}>
-              <Text style={styles.summaryLabel}>COLLECTED</Text>
+              <Text style={styles.summaryLabel}>TOTAL COLLECTED</Text>
               <Text style={styles.summaryValue}>₹ {summary.totalCollected.toLocaleString()}</Text>
             </View>
             <View style={styles.summaryDivider} />
             <View style={styles.summaryItem}>
-              <Text style={styles.summaryLabel}>PAID</Text>
+              <Text style={styles.summaryLabel}>PAID RATIO</Text>
               <Text style={styles.summaryValue}>{summary.paidCount}/{summary.totalMembers}</Text>
             </View>
           </View>
@@ -172,20 +202,88 @@ export default function PaymentScreen({ route, navigation }) {
           )
         }
       />
+
+      {/* INTAKE FORM MODAL */}
+      <Modal
+        visible={showIntake}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowIntake(false)}
+      >
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+          style={styles.modalOverlay}
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>CONFIRM COLLECTION</Text>
+            <Text style={styles.modalName}>{selectedMember?.name.toUpperCase()}</Text>
+            
+            <View style={styles.methodGrid}>
+              <Pressable 
+                style={[styles.methodBtn, method === 'cash' && styles.methodBtnActive]}
+                onPress={() => setMethod('cash')}
+              >
+                <MaterialCommunityIcons name="cash" size={24} color={method === 'cash' ? colors.white : colors.text} />
+                <Text style={[styles.methodText, method === 'cash' && styles.methodTextActive]}>CASH</Text>
+              </Pressable>
+              <Pressable 
+                style={[styles.methodBtn, method === 'online' && styles.methodBtnActive]}
+                onPress={() => setMethod('online')}
+              >
+                <MaterialCommunityIcons name="cellphone-check" size={24} color={method === 'online' ? colors.white : colors.text} />
+                <Text style={[styles.methodText, method === 'online' && styles.methodTextActive]}>ONLINE</Text>
+              </Pressable>
+            </View>
+
+            <View style={styles.remarksWrap}>
+              <Text style={styles.label}>AUDIT REMARKS</Text>
+              <TextInput 
+                style={styles.remarksInput}
+                placeholder="e.g. Received via GPay"
+                placeholderTextColor="#9CA3AF"
+                value={remarks}
+                onChangeText={setRemarks}
+                autoFocus={false}
+              />
+            </View>
+
+            <View style={styles.modalActions}>
+              <Pressable style={styles.cancelBtn} onPress={() => setShowIntake(false)}>
+                <Text style={styles.cancelText}>CANCEL</Text>
+              </Pressable>
+              <Pressable style={styles.confirmBtn} onPress={() => handleConfirm()}>
+                <Text style={styles.confirmText}>CONFIRM PAID</Text>
+              </Pressable>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* THE ABSOLUTE SHIELD */}
+      <View style={[styles.topBlocker, { height: safeTop }]} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white },
+  topBlocker: { 
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: colors.white, 
+    zIndex: 9999, 
+  },
   verticalSpine: { position: 'absolute', left: spacing.xl + normalize(4), top: 0, bottom: 0, width: 1, backgroundColor: '#F3F4F6' },
   header: { paddingHorizontal: spacing.xl, marginBottom: spacing.lg },
   headerTop: { marginBottom: spacing.lg },
   backBtn: { marginBottom: spacing.md, marginLeft: -4 },
   step: { fontSize: normalize(10), fontWeight: '900', color: '#9CA3AF', letterSpacing: 2, marginBottom: 4 },
   brandTitleContainer: { flexDirection: 'row', alignItems: 'baseline', marginLeft: -2 },
-  titleHeavy: { fontSize: normalize(44), fontWeight: '900', color: colors.text, letterSpacing: -2 },
-  titleLight: { fontSize: normalize(44), fontWeight: '200', color: colors.text, letterSpacing: -1 },
+  titleHeavy: { fontSize: normalize(32), fontWeight: '900', color: colors.text, letterSpacing: -1 },
+  titleLight: { fontSize: normalize(32), fontWeight: '200', color: colors.text, letterSpacing: -0.5 },
   monthPicker: { 
     flexDirection: 'row', 
     alignItems: 'center', 
@@ -225,6 +323,7 @@ const styles = StyleSheet.create({
   info: { flex: 1 },
   name: { fontSize: normalize(12), fontWeight: '900', color: colors.text, letterSpacing: 0.5 },
   amount: { fontSize: normalize(10), color: '#9CA3AF', fontWeight: '700', marginTop: 2 },
+  methodTag: { fontSize: normalize(8), fontWeight: '900', color: '#10B981', marginTop: 4, letterSpacing: 0.5 },
   actionBtn: { 
     flexDirection: 'row', 
     alignItems: 'center', 
@@ -238,10 +337,34 @@ const styles = StyleSheet.create({
   actionBtnPaid: { backgroundColor: '#10B981' },
   actionBtnUnpaid: { backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#F3F4F6' },
   actionText: { fontSize: normalize(10), fontWeight: '900', letterSpacing: 1 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalContent: { 
+    backgroundColor: colors.white, 
+    borderTopLeftRadius: 24, 
+    borderTopRightRadius: 24, 
+    padding: spacing.xl,
+    paddingBottom: Platform.OS === 'ios' ? spacing.xxl : spacing.xl
+  },
+  modalHandle: { width: 40, height: 4, backgroundColor: '#E5E7EB', borderRadius: 2, alignSelf: 'center', marginBottom: spacing.lg },
+  modalTitle: { fontSize: normalize(10), fontWeight: '900', color: '#9CA3AF', letterSpacing: 2, marginBottom: 8, textAlign: 'center' },
+  modalName: { fontSize: normalize(24), fontWeight: '900', color: colors.text, letterSpacing: -1, marginBottom: spacing.xl, textAlign: 'center' },
+  methodGrid: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.xl },
+  methodBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, paddingVertical: 16, borderRadius: radius.xs, borderWidth: 1, borderColor: '#F3F4F6', backgroundColor: '#F9FAFB' },
+  methodBtnActive: { backgroundColor: colors.text, borderColor: colors.text },
+  methodText: { fontSize: normalize(12), fontWeight: '900', color: colors.text, letterSpacing: 1 },
+  methodTextActive: { color: colors.white },
+  remarksWrap: { marginBottom: spacing.xxl },
+  label: { fontSize: normalize(8), fontWeight: '900', color: '#9CA3AF', letterSpacing: 1.5, marginBottom: 8 },
+  remarksInput: { fontSize: normalize(16), fontWeight: '700', color: colors.text, borderBottomWidth: 2, borderBottomColor: '#F3F4F6', paddingVertical: 12 },
+  modalActions: { flexDirection: 'row', gap: spacing.md },
+  cancelBtn: { flex: 1, paddingVertical: 16, alignItems: 'center' },
+  cancelText: { fontSize: normalize(12), fontWeight: '900', color: '#9CA3AF', letterSpacing: 1 },
+  confirmBtn: { flex: 2, backgroundColor: '#10B981', paddingVertical: 16, borderRadius: radius.xs, alignItems: 'center' },
+  confirmText: { fontSize: normalize(12), fontWeight: '900', color: colors.white, letterSpacing: 1 },
   emptyState: { 
     alignItems: 'center', 
     justifyContent: 'center', 
-    paddingVertical: 60,
+    paddingVertical: 100,
     backgroundColor: '#F9FAFB', 
     borderRadius: radius.xs,
     borderStyle: 'dashed',

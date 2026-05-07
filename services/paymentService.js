@@ -16,7 +16,7 @@ const paymentsRef = collection(db, 'payments');
 
 const getPaymentId = ({ groupId, memberId, monthNumber }) => `${groupId}_${memberId}_${monthNumber}`;
 
-export const togglePaymentStatus = async ({ groupId, memberId, month, amount, status }) => {
+export const togglePaymentStatus = async ({ groupId, memberId, month, amount, status, method, remarks }) => {
   const docId = getPaymentId({ groupId, memberId, monthNumber: month });
   return await setDoc(
     doc(db, 'payments', docId),
@@ -26,6 +26,8 @@ export const togglePaymentStatus = async ({ groupId, memberId, month, amount, st
       monthNumber: month,
       amount,
       status,
+      method: method || 'none',
+      remarks: remarks || '',
       updatedAt: serverTimestamp(),
     },
     { merge: true }
