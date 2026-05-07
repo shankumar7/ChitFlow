@@ -114,129 +114,122 @@ export default function AuthScreen({ navigation }) {
     </View>
   );
 
-  const MainContent = () => {
-    if (isSuccess) {
-      return (
-        <Animated.View style={[styles.content, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-          <View style={styles.topSection}>
-            <View style={styles.logoWrapSuccess}>
-              <Image source={require('../assets/icon.png')} style={styles.logo} />
-            </View>
-            <Text style={styles.welcomeText}>Welcome,</Text>
-            <Text
-              style={styles.userNameReveal}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-            >
-              {(successUser || name).toUpperCase()}
-            </Text>
-            <View style={styles.revealBar} />
-          </View>
-          
-          {generatedPin ? (
-            <View style={styles.pinDisplay}>
-              <Text style={styles.pinLabel}>YOUR SECURITY PIN</Text>
-              <Text style={styles.pinValue}>{generatedPin}</Text>
-              <Text style={styles.pinNote}>PLEASE NOTE THIS DOWN. YOU WILL NEED IT TO LOGIN AGAIN.</Text>
-            </View>
-          ) : (
-            <View style={styles.readySection}>
-              <Text style={styles.readyTitle}>READY TO FLOW</Text>
-              <Text style={styles.readySub}>Your dashboard is prepared and synchronized.</Text>
-            </View>
-          )}
-
-          <View style={styles.bottomSection}>
-            <Pressable 
-              style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]} 
-              onPress={() => navigation.replace('Dashboard')}
-            >
-              <View style={styles.buttonContent}>
-                <Text style={styles.buttonText}>ENTER DASHBOARD</Text>
-              </View>
-            </Pressable>
-          </View>
-        </Animated.View>
-      );
-    }
-
-    return (
-      <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
-        <View style={styles.topSection}>
-          <View style={styles.modeToggle}>
-            <Pressable onPress={() => setMode('REGISTER')} style={[styles.modeBtn, mode === 'REGISTER' && styles.modeBtnActive]}>
-              <Text style={[styles.modeText, mode === 'REGISTER' && styles.modeTextActive]}>REGISTER</Text>
-            </Pressable>
-            <Pressable onPress={() => setMode('LOGIN')} style={[styles.modeBtn, mode === 'LOGIN' && styles.modeBtnActive]}>
-              <Text style={[styles.modeText, mode === 'LOGIN' && styles.modeTextActive]}>LOGIN</Text>
-            </Pressable>
-          </View>
-          <View style={styles.logoWrap}>
-            <Image source={require('../assets/icon.png')} style={styles.logo} />
-          </View>
-          <Text style={styles.step}>{mode === 'REGISTER' ? 'ONBOARDING' : 'WELCOME BACK'}</Text>
-          <BrandTitle />
-        </View>
-
-        <View style={styles.inputSection}>
-          {mode === 'REGISTER' && (
-            <View style={styles.field}>
-              <Text style={styles.label}>FULL NAME</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="NAME"
-                placeholderTextColor="#D1D5DB"
-                value={name}
-                onChangeText={setName}
-                autoCapitalize="words"
-                autoFocus
-              />
-              <View style={styles.underline} />
-            </View>
-          )}
-
-          <View style={[styles.field, { marginTop: mode === 'REGISTER' ? spacing.xl : 0 }]}>
-            <Text style={styles.label}>{mode === 'REGISTER' ? 'SECURITY PIN (OPTIONAL)' : 'ENTER PIN TO ACCESS'}</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="0000"
-              placeholderTextColor="#D1D5DB"
-              value={pin}
-              onChangeText={setPin}
-              keyboardType="numeric"
-              maxLength={4}
-              secureTextEntry={false}
-              autoFocus={mode === 'LOGIN'}
-            />
-            <View style={styles.underline} />
-          </View>
-        </View>
-
-        <View style={styles.bottomSection}>
-          <Pressable 
-            style={({ pressed }) => [styles.button, pressed && styles.buttonPressed, (mode === 'REGISTER' ? !name.trim() : !pin.trim()) && styles.buttonDisabled]} 
-            onPress={handleAuth}
-            disabled={loading || (mode === 'REGISTER' ? !name.trim() : !pin.trim())}
-          >
-            {loading ? (
-              <ActivityIndicator color={colors.white} />
-            ) : (
-              <View style={styles.buttonContent}>
-                <Text style={styles.buttonText}>{mode === 'REGISTER' ? 'CONFIRM' : 'LOGIN'}</Text>
-              </View>
-            )}
-          </Pressable>
-        </View>
-      </Animated.View>
-    );
-  };
-
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.verticalSpine} />
-        <MainContent />
+        
+        {isSuccess ? (
+          <Animated.View style={[styles.content, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+            <View style={styles.topSection}>
+              <View style={styles.logoWrapSuccess}>
+                <Image source={require('../assets/icon.png')} style={styles.logo} />
+              </View>
+              <Text style={styles.welcomeText}>Welcome,</Text>
+              <Text
+                style={styles.userNameReveal}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+              >
+                {(successUser || name).toUpperCase()}
+              </Text>
+              <View style={styles.revealBar} />
+            </View>
+            
+            {generatedPin ? (
+              <View style={styles.pinDisplay}>
+                <Text style={styles.pinLabel}>YOUR SECURITY PIN</Text>
+                <Text style={styles.pinValue}>{generatedPin}</Text>
+                <Text style={styles.pinNote}>PLEASE NOTE THIS DOWN. YOU WILL NEED IT TO LOGIN AGAIN.</Text>
+              </View>
+            ) : (
+              <View style={styles.readySection}>
+                <Text style={styles.readyTitle}>READY TO FLOW</Text>
+                <Text style={styles.readySub}>Your dashboard is prepared and synchronized.</Text>
+              </View>
+            )}
+
+            <View style={styles.bottomSection}>
+              <Pressable 
+                style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]} 
+                onPress={() => navigation.replace('Dashboard')}
+              >
+                <View style={styles.buttonContent}>
+                  <Text style={styles.buttonText}>ENTER DASHBOARD</Text>
+                </View>
+              </Pressable>
+            </View>
+          </Animated.View>
+        ) : (
+          <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
+            <View style={styles.topSection}>
+              <View style={styles.modeToggle}>
+                <Pressable onPress={() => setMode('REGISTER')} style={[styles.modeBtn, mode === 'REGISTER' && styles.modeBtnActive]}>
+                  <Text style={[styles.modeText, mode === 'REGISTER' && styles.modeTextActive]}>REGISTER</Text>
+                </Pressable>
+                <Pressable onPress={() => setMode('LOGIN')} style={[styles.modeBtn, mode === 'LOGIN' && styles.modeBtnActive]}>
+                  <Text style={[styles.modeText, mode === 'LOGIN' && styles.modeTextActive]}>LOGIN</Text>
+                </Pressable>
+              </View>
+              <View style={styles.logoWrap}>
+                <Image source={require('../assets/icon.png')} style={styles.logo} />
+              </View>
+              <Text style={styles.step}>{mode === 'REGISTER' ? 'ONBOARDING' : 'WELCOME BACK'}</Text>
+              <BrandTitle />
+            </View>
+
+            <View style={styles.inputSection}>
+              {mode === 'REGISTER' && (
+                <View style={styles.field}>
+                  <Text style={styles.label}>FULL NAME</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="NAME"
+                    placeholderTextColor="#D1D5DB"
+                    value={name}
+                    onChangeText={setName}
+                    autoCapitalize="words"
+                    autoFocus
+                  />
+                  <View style={styles.underline} />
+                </View>
+              )}
+
+              <View style={[styles.field, { marginTop: mode === 'REGISTER' ? spacing.xl : 0 }]}>
+                <Text style={styles.label}>{mode === 'REGISTER' ? 'SECURITY PIN (OPTIONAL)' : 'ENTER PIN TO ACCESS'}</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="0000"
+                  placeholderTextColor="#D1D5DB"
+                  value={pin}
+                  onChangeText={setPin}
+                  keyboardType="numeric"
+                  maxLength={4}
+                  secureTextEntry={false}
+                  autoFocus={mode === 'LOGIN'}
+                />
+                <View style={styles.underline} />
+              </View>
+            </View>
+
+            <View style={styles.bottomSection}>
+              <Pressable 
+                style={({ pressed }) => [styles.button, pressed && styles.buttonPressed, (mode === 'REGISTER' ? !name.trim() : !pin.trim()) && styles.buttonDisabled]} 
+                onPress={handleAuth}
+                disabled={loading || (mode === 'REGISTER' ? !name.trim() : !pin.trim())}
+              >
+                {loading ? (
+                  <ActivityIndicator color={colors.white} />
+                ) : (
+                  <View style={styles.buttonContent}>
+                    <Text style={styles.buttonText}>{mode === 'REGISTER' ? 'CONFIRM' : 'LOGIN'}</Text>
+                  </View>
+                )}
+              </Pressable>
+            </View>
+          </Animated.View>
+        )}
       </SafeAreaView>
     </View>
   );

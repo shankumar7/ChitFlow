@@ -9,11 +9,22 @@ import {
   Platform, 
   StatusBar,
   SafeAreaView,
-  Alert
+  Alert,
+  BackHandler
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors, spacing, radius, normalize, window, layout } from '../utils/theme';
+
+const SummaryCard = ({ title, value, icon, color, opacity, translateY }) => (
+  <Animated.View style={[styles.card, { opacity, transform: [{ translateY }] }]}>
+    <View style={styles.cardHeader}>
+      <Text style={styles.cardLabel}>{title}</Text>
+      <MaterialCommunityIcons name={icon} size={20} color={color} />
+    </View>
+    <Text style={styles.cardValue}>{value}</Text>
+  </Animated.View>
+);
 
 export default function DashboardScreen({ navigation }) {
   const [userName, setUserName] = useState('');
@@ -24,6 +35,18 @@ export default function DashboardScreen({ navigation }) {
   useEffect(() => {
     loadUser();
     startAnimations();
+
+    const backAction = () => {
+      // Prevent going back to Welcome/Register
+      return true; 
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      "hardwareBackPress",
+      backAction
+    );
+
+    return () => backHandler.remove();
   }, []);
 
   const loadUser = async () => {
@@ -56,16 +79,6 @@ export default function DashboardScreen({ navigation }) {
     ]).start();
   };
 
-  const SummaryCard = ({ title, value, icon, color }) => (
-    <Animated.View style={[styles.card, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-      <View style={styles.cardHeader}>
-        <Text style={styles.cardLabel}>{title}</Text>
-        <MaterialCommunityIcons name={icon} size={20} color={color} />
-      </View>
-      <Text style={styles.cardValue}>{value}</Text>
-    </Animated.View>
-  );
-
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
@@ -91,8 +104,8 @@ export default function DashboardScreen({ navigation }) {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.summaryGrid}>
-            <SummaryCard title="TOTAL CHIT VALUE" value="₹ 0.00" icon="wallet-outline" color="#10B981" />
-            <SummaryCard title="ACTIVE GROUPS" value="0" icon="account-group-outline" color="#3B82F6" />
+            <SummaryCard title="TOTAL CHIT VALUE" value="₹ 0.00" icon="wallet-outline" color="#10B981" opacity={fadeAnim} translateY={slideAnim} />
+            <SummaryCard title="ACTIVE GROUPS" value="0" icon="account-group-outline" color="#3B82F6" opacity={fadeAnim} translateY={slideAnim} />
           </View>
 
           <Animated.View style={[styles.section, { opacity: fadeAnim }]}>
