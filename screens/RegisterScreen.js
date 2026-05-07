@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { StyleSheet, Text, View, TextInput, Pressable, Platform, Animated, ActivityIndicator, Alert } from 'react-native';
+import { StyleSheet, Text, View, TextInput, Pressable, Platform, Animated, ActivityIndicator, Alert, Image } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { collection, query, where, getDocs, doc, setDoc, getDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
@@ -34,7 +34,6 @@ export default function AuthScreen({ navigation }) {
 
     try {
       if (mode === 'LOGIN') {
-        // PIN-ONLY LOGIN: Search for user by PIN
         const usersRef = collection(db, 'users');
         const q = query(usersRef, where("pin", "==", pin.trim()));
         const querySnapshot = await getDocs(q);
@@ -52,7 +51,6 @@ export default function AuthScreen({ navigation }) {
         setSuccessUser(userData.name);
         setIsSuccess(true);
       } else {
-        // REGISTER MODE
         const userRef = doc(db, 'users', name.trim().toLowerCase());
         const userSnap = await getDoc(userRef);
 
@@ -98,26 +96,52 @@ export default function AuthScreen({ navigation }) {
     }
   };
 
+  const BrandTitle = ({ scale = 1 }) => (
+    <View style={[styles.brandTitleContainer, { transform: [{ scale }] }]}>
+      <Text style={styles.titleHeavy}>Chit</Text>
+      <Text style={styles.titleLight}>Flow</Text>
+    </View>
+  );
+
   if (isSuccess) {
     return (
       <View style={styles.container}>
         <View style={styles.verticalSpine} />
         <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
           <View style={styles.topSection}>
-            <Text style={styles.step}>CHITFLOW</Text>
-            <Text style={styles.title}>Welcome,{"\n"}{successUser || name}</Text>
+            <View style={styles.logoWrapSuccess}>
+              <Image source={require('../assets/icon.png')} style={styles.logo} />
+            </View>
+            <Text style={styles.step}>AUTHENTICATION SUCCESS</Text>
+            <Text style={styles.welcomeText}>Welcome,</Text>
+            <Text 
+              style={styles.userNameReveal} 
+              numberOfLines={1} 
+              adjustsFontSizeToFit
+            >
+              {(successUser || name).toUpperCase()}
+            </Text>
+            <View style={styles.revealBar} />
           </View>
           
-          {generatedPin && (
+          {generatedPin ? (
             <View style={styles.pinDisplay}>
               <Text style={styles.pinLabel}>YOUR SECURITY PIN</Text>
               <Text style={styles.pinValue}>{generatedPin}</Text>
               <Text style={styles.pinNote}>PLEASE NOTE THIS DOWN. YOU WILL NEED IT TO LOGIN AGAIN.</Text>
             </View>
+          ) : (
+            <View style={styles.readySection}>
+              <Text style={styles.readyTitle}>READY TO FLOW</Text>
+              <Text style={styles.readySub}>Your dashboard is prepared and synchronized.</Text>
+            </View>
           )}
 
           <View style={styles.bottomSection}>
-            <Pressable style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]} onPress={() => navigation.replace('Dashboard')}>
+            <Pressable 
+              style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]} 
+              onPress={() => navigation.replace('Dashboard')}
+            >
               <View style={styles.buttonContent}>
                 <Text style={styles.buttonText}>ENTER DASHBOARD</Text>
               </View>
@@ -141,8 +165,11 @@ export default function AuthScreen({ navigation }) {
               <Text style={[styles.modeText, mode === 'LOGIN' && styles.modeTextActive]}>LOGIN</Text>
             </Pressable>
           </View>
+          <View style={styles.logoWrap}>
+            <Image source={require('../assets/icon.png')} style={styles.logo} />
+          </View>
           <Text style={styles.step}>{mode === 'REGISTER' ? 'ONBOARDING' : 'WELCOME BACK'}</Text>
-          <Text style={styles.title}>CHITFLOW</Text>
+          <BrandTitle />
         </View>
 
         <View style={styles.inputSection}>
@@ -209,8 +236,19 @@ const styles = StyleSheet.create({
   modeBtnActive: { backgroundColor: colors.text },
   modeText: { fontSize: normalize(10), fontWeight: '900', color: '#9CA3AF', letterSpacing: 1 },
   modeTextActive: { color: colors.white },
-  step: { fontSize: normalize(12), fontWeight: '900', color: '#9CA3AF', letterSpacing: 2, marginBottom: 8 },
-  title: { fontSize: normalize(44), fontWeight: '900', color: colors.text, letterSpacing: -2 },
+  logoWrap: { width: normalize(60), height: normalize(60), backgroundColor: '#fff', borderRadius: 8, marginBottom: spacing.md, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, padding: 8 },
+  logoWrapSuccess: { width: normalize(44), height: normalize(44), backgroundColor: '#fff', borderRadius: 6, marginBottom: spacing.xl, padding: 6, borderWidth: 1, borderColor: '#F3F4F6' },
+  logo: { width: '100%', height: '100%', resizeMode: 'contain' },
+  step: { fontSize: normalize(10), fontWeight: '900', color: '#9CA3AF', letterSpacing: 2, marginBottom: 12 },
+  brandTitleContainer: { flexDirection: 'row', alignItems: 'baseline', marginLeft: -2 },
+  titleHeavy: { fontSize: normalize(60), fontWeight: '900', color: colors.text, letterSpacing: -3 },
+  titleLight: { fontSize: normalize(60), fontWeight: '200', color: colors.text, letterSpacing: -2 },
+  welcomeText: { fontSize: normalize(28), fontWeight: '300', color: colors.text, letterSpacing: -1, marginBottom: -4 },
+  userNameReveal: { fontSize: normalize(52), fontWeight: '900', color: colors.text, letterSpacing: -2 },
+  revealBar: { height: 8, backgroundColor: colors.text, width: normalize(80), marginTop: 8 },
+  readySection: { marginVertical: spacing.xl },
+  readyTitle: { fontSize: normalize(12), fontWeight: '900', color: colors.text, letterSpacing: 3, marginBottom: 8 },
+  readySub: { fontSize: normalize(14), color: '#9CA3AF', fontWeight: '600', lineHeight: 22 },
   inputSection: { marginVertical: spacing.xl },
   field: { marginBottom: spacing.md },
   label: { fontSize: normalize(10), fontWeight: '800', color: '#9CA3AF', letterSpacing: 1.5, marginBottom: 4 },
@@ -221,7 +259,15 @@ const styles = StyleSheet.create({
   pinValue: { fontSize: normalize(80), fontWeight: '900', color: colors.text, letterSpacing: 8 },
   pinNote: { fontSize: normalize(12), color: '#9CA3AF', fontWeight: '700', lineHeight: 18, marginTop: spacing.xl, maxWidth: '80%' },
   bottomSection: { alignItems: 'flex-start' },
-  button: { backgroundColor: colors.text, paddingVertical: normalize(20), paddingHorizontal: normalize(32), borderRadius: radius.xs, width: '100%', alignItems: 'center' },
+  button: { 
+    backgroundColor: colors.text, 
+    paddingVertical: normalize(22), 
+    paddingHorizontal: normalize(32), 
+    borderRadius: radius.xs, 
+    width: '100%', 
+    alignItems: 'center',
+    ...Platform.select({ web: { outlineStyle: 'none', cursor: 'pointer' } })
+  },
   buttonContent: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   buttonPressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
   buttonDisabled: { opacity: 0.1 },

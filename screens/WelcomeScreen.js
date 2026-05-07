@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { StyleSheet, Text, View, Pressable, Platform, Animated, Image } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { colors, spacing, radius, normalize, window, elevation } from '../utils/theme';
+import { colors, spacing, radius, normalize, window, layout } from '../utils/theme';
 
 export default function WelcomeScreen({ navigation }) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -9,59 +9,49 @@ export default function WelcomeScreen({ navigation }) {
 
   useEffect(() => {
     const useNative = Platform.OS !== 'web';
-    
-    // Fade in content
     Animated.timing(fadeAnim, {
       toValue: 1,
       duration: 1000,
       useNativeDriver: useNative,
     }).start();
 
-    // Animate line expansion
     Animated.timing(lineWidth, {
       toValue: 1,
       duration: 1500,
-      delay: 500,
-      useNativeDriver: false, // width doesn't support native driver
+      useNativeDriver: useNative,
     }).start();
   }, [fadeAnim, lineWidth]);
 
   const animatedLineWidth = lineWidth.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, normalize(80)],
+    outputRange: ['0%', '60%'],
   });
 
   return (
     <View style={styles.container}>
-      <View style={styles.bgCircle} />
       <View style={styles.verticalSpine} />
-
+      
       <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
         <View style={styles.topSection}>
+          <View style={styles.logoWrap}>
+            <Image source={require('../assets/icon.png')} style={styles.logo} />
+          </View>
           <Text style={styles.version}>VERSION 1.0</Text>
-          <Image 
-            source={require('../assets/icon.png')} 
-            style={styles.logo}
-            resizeMode="contain"
-          />
-          <View style={styles.titleContainer}>
-            <Text style={styles.appNameBold}>Chit</Text>
-            <Text style={styles.appNameLight}>Flow</Text>
+          <View style={styles.brandContainer}>
+            <Text style={styles.titleHeavy}>Chit</Text>
+            <Text style={styles.titleLight}>Flow</Text>
           </View>
         </View>
 
         <View style={styles.bottomSection}>
           <View style={styles.actionWrap}>
             <Pressable 
-              style={({ pressed }) => [
-                styles.button,
-                pressed && styles.buttonPressed
-              ]}
+              style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
               onPress={() => navigation.navigate('Register')}
             >
               <View style={styles.buttonRow}>
-                <Text style={styles.buttonText}>Start Your Flow</Text>
-                <MaterialCommunityIcons name="arrow-right" size={24} color={colors.text} style={styles.arrow} />
+                <Text style={styles.buttonText}>START YOUR FLOW</Text>
+                <MaterialCommunityIcons name="arrow-right" size={24} color={colors.text} />
               </View>
             </Pressable>
             <Animated.View style={[styles.accentLine, { width: animatedLineWidth }]} />
@@ -74,86 +64,21 @@ export default function WelcomeScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAFAFA' },
-  bgCircle: {
-    position: 'absolute',
-    top: -window.width * 0.2,
-    right: -window.width * 0.2,
-    width: window.width * 1.5,
-    height: window.width * 1.5,
-    borderRadius: window.width * 0.75,
-    backgroundColor: '#F3F4F6',
-  },
-  verticalSpine: {
-    position: 'absolute',
-    left: spacing.xl + normalize(40),
-    top: 0,
-    bottom: 0,
-    width: 1,
-    backgroundColor: '#E5E7EB',
-  },
-  content: {
-    flex: 1,
-    padding: spacing.xl,
-    justifyContent: 'space-between',
-    paddingVertical: window.height * 0.1,
-  },
-  topSection: { 
-    alignItems: 'flex-start',
-  },
-  version: {
-    fontSize: normalize(10),
-    fontWeight: '800',
-    color: '#9CA3AF',
-    letterSpacing: 2,
-    marginBottom: spacing.xl,
-  },
-  logo: {
-    width: normalize(80),
-    height: normalize(80),
-    marginBottom: spacing.md,
-    zIndex: 2,
-  },
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-  },
-  appNameBold: { fontSize: normalize(52), fontWeight: '900', color: colors.text, letterSpacing: -2 },
-  appNameLight: { fontSize: normalize(52), fontWeight: '200', color: colors.text, letterSpacing: -2 },
-  bottomSection: {
-    alignItems: 'flex-start',
-  },
-  actionWrap: {
-    marginBottom: spacing.xl,
-  },
-  button: { 
-    paddingVertical: spacing.sm,
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  arrow: {
-    marginTop: 2,
-  },
-  buttonPressed: { opacity: 0.6 },
-  buttonText: { 
-    color: colors.text, 
-    fontSize: normalize(20), 
-    fontWeight: '900', 
-    letterSpacing: 1, 
-    textTransform: 'uppercase' 
-  },
-  accentLine: {
-    height: 4,
-    backgroundColor: colors.text,
-    marginTop: 4,
-  },
-  location: {
-    fontSize: normalize(10),
-    fontWeight: '800',
-    color: '#9CA3AF',
-    letterSpacing: 3,
-  }
+  container: { flex: 1, backgroundColor: colors.white },
+  verticalSpine: { position: 'absolute', left: spacing.xl + normalize(4), top: 0, bottom: 0, width: 1, backgroundColor: '#F3F4F6' },
+  content: { flex: 1, padding: spacing.xl, justifyContent: 'space-between', paddingVertical: window.height * 0.1, ...layout.container },
+  logoWrap: { width: normalize(80), height: normalize(80), backgroundColor: '#fff', borderRadius: 12, marginBottom: spacing.xl, elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10, padding: 12, borderWidth: 1, borderColor: '#F3F4F6' },
+  logo: { width: '100%', height: '100%', resizeMode: 'contain' },
+  version: { fontSize: normalize(12), fontWeight: '900', color: '#9CA3AF', letterSpacing: 2, marginBottom: 8 },
+  brandContainer: { flexDirection: 'row', alignItems: 'baseline', marginLeft: -4 },
+  titleHeavy: { fontSize: normalize(64), fontWeight: '900', color: colors.text, letterSpacing: -4 },
+  titleLight: { fontSize: normalize(64), fontWeight: '200', color: colors.text, letterSpacing: -2 },
+  bottomSection: { alignItems: 'flex-start' },
+  actionWrap: { width: '100%', marginBottom: spacing.xl },
+  button: { paddingVertical: spacing.md, alignItems: 'flex-start' },
+  buttonRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  buttonText: { fontSize: normalize(20), fontWeight: '900', color: colors.text, letterSpacing: 1 },
+  accentLine: { height: 4, backgroundColor: colors.text, marginTop: 4 },
+  location: { fontSize: normalize(10), fontWeight: '800', color: '#E5E7EB', letterSpacing: 2 },
+  buttonPressed: { opacity: 0.7 },
 });

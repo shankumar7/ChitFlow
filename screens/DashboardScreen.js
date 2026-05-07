@@ -68,7 +68,10 @@ export default function DashboardScreen({ navigation }) {
           <View style={styles.header}>
             <View style={styles.topRow}>
               <View style={styles.brandBlock}>
-                <Text style={styles.greetingBold}>CHITFLOW</Text>
+                <View style={styles.hybridBrand}>
+                  <Text style={styles.brandHeavy}>Chit</Text>
+                  <Text style={styles.brandLight}>Flow</Text>
+                </View>
                 <Text style={styles.greetingLight}>DASHBOARD</Text>
               </View>
               <View style={styles.headerActions}>
@@ -78,7 +81,13 @@ export default function DashboardScreen({ navigation }) {
               </View>
             </View>
 
-            <Text style={styles.userLabel}>WELCOME, {userName.toUpperCase()}</Text>
+            <Text 
+              style={styles.userLabel} 
+              numberOfLines={1} 
+              adjustsFontSizeToFit
+            >
+              WELCOME BACK, {userName.toUpperCase()}
+            </Text>
 
             <View style={styles.heroSection}>
               <Text style={styles.sectionLabel}>MONTHLY TOTAL</Text>
@@ -151,9 +160,11 @@ const styles = StyleSheet.create({
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   profileIcon: { opacity: 0.8 },
   brandBlock: { borderLeftWidth: 3, borderLeftColor: colors.text, paddingLeft: 12 },
-  greetingBold: { fontSize: normalize(24), fontWeight: '900', color: colors.text, letterSpacing: -0.5 },
+  hybridBrand: { flexDirection: 'row', alignItems: 'baseline', marginLeft: -2 },
+  brandHeavy: { fontSize: normalize(24), fontWeight: '900', color: colors.text, letterSpacing: -1 },
+  brandLight: { fontSize: normalize(24), fontWeight: '200', color: colors.text, letterSpacing: -0.5 },
   greetingLight: { fontSize: normalize(24), fontWeight: '200', color: colors.text, letterSpacing: -0.5, marginTop: -6 },
-  userLabel: { fontSize: normalize(10), fontWeight: '800', color: '#9CA3AF', letterSpacing: 1, marginBottom: spacing.xl },
+  userLabel: { fontSize: normalize(10), fontWeight: '800', color: '#9CA3AF', letterSpacing: 1, marginBottom: spacing.xl, maxWidth: '80%' },
   logoutBtn: { padding: 8, backgroundColor: '#F9FAFB', borderRadius: radius.full },
   heroSection: { marginBottom: spacing.xxl },
   sectionLabel: { fontSize: normalize(10), fontWeight: '800', color: '#9CA3AF', letterSpacing: 2, marginBottom: 12 },
