@@ -64,7 +64,7 @@ export default function AuthScreen({ navigation }) {
         setSuccessUser(userData.name);
         setIsSuccess(true);
       } else {
-        const userRef = doc(db, 'users', name.trim().toLowerCase());
+        const userRef = doc(db, 'users', (name || '').trim().toLowerCase());
         const userSnap = await getDoc(userRef);
 
         if (userSnap.exists()) {
@@ -141,7 +141,7 @@ export default function AuthScreen({ navigation }) {
                 numberOfLines={1}
                 adjustsFontSizeToFit
               >
-                {(successUser || name).toUpperCase()}
+                {((successUser || name) || 'User').toUpperCase()}
               </Animated.Text>
               <View style={styles.revealBar} />
             </View>

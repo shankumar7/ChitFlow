@@ -26,7 +26,6 @@ export default function ProfileScreen({ navigation }) {
   const [updateStatus, setUpdateStatus] = useState('LATEST');
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  // Smart fallback for status bar height
   const safeTop = insets.top || StatusBar.currentHeight || 30;
 
   useEffect(() => {
@@ -95,7 +94,6 @@ export default function ProfileScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <StatusBar translucent={true} backgroundColor="transparent" barStyle="dark-content" />
-      
       <View style={styles.verticalSpine} />
       
       <ScrollView 
@@ -126,18 +124,18 @@ export default function ProfileScreen({ navigation }) {
                   <MaterialCommunityIcons name="account" size={normalize(40)} color={colors.white} />
                 </View>
                 <Text style={styles.label}>IDENTIFIED AS</Text>
-                <Text style={styles.name} numberOfLines={1} adjustsFontSizeToFit>{user.name.toUpperCase()}</Text>
+                <Text style={styles.name} numberOfLines={1} adjustsFontSizeToFit>{(user?.name || 'Loading').toUpperCase()}</Text>
                 <View style={styles.revealBar} />
               </View>
 
               <View style={styles.detailsGrid}>
                 <View style={styles.detailCard}>
                   <Text style={styles.detailLabel}>SECURITY PIN</Text>
-                  <Text style={styles.detailValue}>{user.pin}</Text>
+                  <Text style={styles.detailValue}>{user?.pin || '----'}</Text>
                 </View>
                 <View style={styles.detailCard}>
                   <Text style={styles.detailLabel}>GROUPS</Text>
-                  <Text style={styles.detailValue}>{user.groupsCount}</Text>
+                  <Text style={styles.detailValue}>{user?.groupsCount || 0}</Text>
                 </View>
               </View>
 
@@ -182,7 +180,6 @@ export default function ProfileScreen({ navigation }) {
         </Animated.View>
       </ScrollView>
 
-      {/* THE ABSOLUTE SHIELD: Opaque white cover that content scrolls BEHIND */}
       <View style={[styles.topBlocker, { height: safeTop }]} />
     </View>
   );
@@ -190,14 +187,7 @@ export default function ProfileScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white },
-  topBlocker: { 
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: colors.white, 
-    zIndex: 9999, 
-  },
+  topBlocker: { position: 'absolute', top: 0, left: 0, right: 0, backgroundColor: colors.white, zIndex: 9999 },
   verticalSpine: { position: 'absolute', left: spacing.xl + normalize(4), top: 0, bottom: 0, width: 1, backgroundColor: '#F3F4F6' },
   scrollView: { flex: 1 },
   scrollContent: { paddingHorizontal: spacing.xl, ...layout.container },
@@ -210,15 +200,7 @@ const styles = StyleSheet.create({
   loaderWrap: { paddingVertical: 100, justifyContent: 'center', alignItems: 'center' },
   mainContent: { flex: 1 },
   profileSection: { marginVertical: spacing.xl },
-  avatarWrap: { 
-    width: normalize(70), 
-    height: normalize(70), 
-    backgroundColor: colors.text, 
-    borderRadius: radius.xs, 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    marginBottom: spacing.lg
-  },
+  avatarWrap: { width: normalize(70), height: normalize(70), backgroundColor: colors.text, borderRadius: radius.xs, justifyContent: 'center', alignItems: 'center', marginBottom: spacing.lg },
   label: { fontSize: normalize(10), fontWeight: '800', color: '#9CA3AF', letterSpacing: 1.5, marginBottom: 12 },
   name: { fontSize: normalize(42), fontWeight: '900', color: colors.text, letterSpacing: -1 },
   revealBar: { height: 6, backgroundColor: colors.text, width: normalize(60), marginTop: 4 },

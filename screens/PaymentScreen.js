@@ -11,7 +11,8 @@ import {
   Animated,
   TextInput,
   Modal,
-  KeyboardAvoidingView
+  KeyboardAvoidingView,
+  Linking
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -32,10 +33,9 @@ export default function PaymentScreen({ route, navigation }) {
   // Intake State
   const [showIntake, setShowIntake] = useState(false);
   const [selectedMember, setSelectedMember] = useState(null);
-  const [method, setMethod] = useState('cash'); // cash, online
+  const [method, setMethod] = useState('cash'); // cash, upi
   const [remarks, setRemarks] = useState('');
 
-  // Smart fallback for status bar height
   const safeTop = insets.top || StatusBar.currentHeight || 30;
 
   useEffect(() => {
@@ -78,10 +78,13 @@ export default function PaymentScreen({ route, navigation }) {
     });
   };
 
+  const handleCall = (phone) => {
+    if (phone) Linking.openURL(`tel:${phone}`);
+  };
+
   const openIntake = (member) => {
     const existing = payments.find(p => p.memberId === member.id);
     if (existing?.status === 'paid') {
-      // Revert to unpaid if already paid (quick toggle)
       handleConfirm(member.id, 'unpaid');
     } else {
       setSelectedMember(member);
@@ -119,8 +122,13 @@ export default function PaymentScreen({ route, navigation }) {
           <View style={styles.info}>
             <Text style={styles.name}>{item.name.toUpperCase()}</Text>
             <Text style={styles.amount}>₹ {monthlyAmount.toLocaleString()}</Text>
-            {isPaid && payment.method && (
-              <Text style={styles.methodTag}>{payment.method.toUpperCase()} {payment.remarks ? `• ${payment.remarks}` : ''}</Text>
+            {isPaid ? (
+              <Text style={styles.methodTag}>{(payment.method || 'CASH').toUpperCase()} {payment.remarks ? `• ${payment.remarks}` : ''}</Text>
+            ) : (
+              <Pressable onPress={() => handleCall(item.phone)} style={styles.callLink}>
+                <MaterialCommunityIcons name="phone" size={14} color="#3B82F6" />
+                <Text style={styles.callText}>FOLLOW UP NOW</Text>
+              </Pressable>
             )}
           </View>
           <Pressable 
@@ -203,64 +211,37 @@ export default function PaymentScreen({ route, navigation }) {
         }
       />
 
-      {/* INTAKE FORM MODAL */}
-      <Modal
-        visible={showIntake}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setShowIntake(false)}
-      >
-        <KeyboardAvoidingView 
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
-          style={styles.modalOverlay}
-        >
+      <Modal visible={showIntake} transparent={true} animationType="slide">
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHandle} />
             <Text style={styles.modalTitle}>CONFIRM COLLECTION</Text>
             <Text style={styles.modalName}>{selectedMember?.name.toUpperCase()}</Text>
             
             <View style={styles.methodGrid}>
-              <Pressable 
-                style={[styles.methodBtn, method === 'cash' && styles.methodBtnActive]}
-                onPress={() => setMethod('cash')}
-              >
+              <Pressable style={[styles.methodBtn, method === 'cash' && styles.methodBtnActive]} onPress={() => setMethod('cash')}>
                 <MaterialCommunityIcons name="cash" size={24} color={method === 'cash' ? colors.white : colors.text} />
                 <Text style={[styles.methodText, method === 'cash' && styles.methodTextActive]}>CASH</Text>
               </Pressable>
-              <Pressable 
-                style={[styles.methodBtn, method === 'online' && styles.methodBtnActive]}
-                onPress={() => setMethod('online')}
-              >
-                <MaterialCommunityIcons name="cellphone-check" size={24} color={method === 'online' ? colors.white : colors.text} />
-                <Text style={[styles.methodText, method === 'online' && styles.methodTextActive]}>ONLINE</Text>
+              <Pressable style={[styles.methodBtn, method === 'upi' && styles.methodBtnActive]} onPress={() => setMethod('upi')}>
+                <MaterialCommunityIcons name="cellphone-check" size={24} color={method === 'upi' ? colors.white : colors.text} />
+                <Text style={[styles.methodText, method === 'upi' && styles.methodTextActive]}>UPI</Text>
               </Pressable>
             </View>
 
             <View style={styles.remarksWrap}>
               <Text style={styles.label}>AUDIT REMARKS</Text>
-              <TextInput 
-                style={styles.remarksInput}
-                placeholder="e.g. Received via GPay"
-                placeholderTextColor="#9CA3AF"
-                value={remarks}
-                onChangeText={setRemarks}
-                autoFocus={false}
-              />
+              <TextInput style={styles.remarksInput} placeholder="e.g. GPay or PhonePe" placeholderTextColor="#9CA3AF" value={remarks} onChangeText={setRemarks} />
             </View>
 
             <View style={styles.modalActions}>
-              <Pressable style={styles.cancelBtn} onPress={() => setShowIntake(false)}>
-                <Text style={styles.cancelText}>CANCEL</Text>
-              </Pressable>
-              <Pressable style={styles.confirmBtn} onPress={() => handleConfirm()}>
-                <Text style={styles.confirmText}>CONFIRM PAID</Text>
-              </Pressable>
+              <Pressable style={styles.cancelBtn} onPress={() => setShowIntake(false)}><Text style={styles.cancelText}>CANCEL</Text></Pressable>
+              <Pressable style={styles.confirmBtn} onPress={() => handleConfirm()}><Text style={styles.confirmText}>CONFIRM PAID</Text></Pressable>
             </View>
           </View>
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* THE ABSOLUTE SHIELD */}
       <View style={[styles.topBlocker, { height: safeTop }]} />
     </View>
   );
@@ -268,14 +249,7 @@ export default function PaymentScreen({ route, navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white },
-  topBlocker: { 
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: colors.white, 
-    zIndex: 9999, 
-  },
+  topBlocker: { position: 'absolute', top: 0, left: 0, right: 0, backgroundColor: colors.white, zIndex: 9999 },
   verticalSpine: { position: 'absolute', left: spacing.xl + normalize(4), top: 0, bottom: 0, width: 1, backgroundColor: '#F3F4F6' },
   header: { paddingHorizontal: spacing.xl, marginBottom: spacing.lg },
   headerTop: { marginBottom: spacing.lg },
@@ -284,67 +258,30 @@ const styles = StyleSheet.create({
   brandTitleContainer: { flexDirection: 'row', alignItems: 'baseline', marginLeft: -2 },
   titleHeavy: { fontSize: normalize(32), fontWeight: '900', color: colors.text, letterSpacing: -1 },
   titleLight: { fontSize: normalize(32), fontWeight: '200', color: colors.text, letterSpacing: -0.5 },
-  monthPicker: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    justifyContent: 'space-between',
-    backgroundColor: '#F9FAFB',
-    borderRadius: radius.xs,
-    padding: spacing.xs,
-    borderWidth: 1,
-    borderColor: '#F3F4F6'
-  },
+  monthPicker: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#F9FAFB', borderRadius: radius.xs, padding: spacing.xs, borderWidth: 1, borderColor: '#F3F4F6' },
   monthArrow: { padding: 10 },
   monthText: { fontSize: normalize(12), fontWeight: '900', color: colors.text, letterSpacing: 1 },
-  summaryBox: { 
-    flexDirection: 'row', 
-    backgroundColor: colors.text, 
-    borderRadius: radius.xs, 
-    padding: spacing.lg, 
-    marginBottom: spacing.xl,
-    justifyContent: 'space-between',
-    alignItems: 'center'
-  },
+  summaryBox: { flexDirection: 'row', backgroundColor: colors.text, borderRadius: radius.xs, padding: spacing.lg, marginBottom: spacing.xl, justifyContent: 'space-between', alignItems: 'center' },
   summaryItem: { flex: 1, alignItems: 'center' },
   summaryLabel: { fontSize: normalize(8), fontWeight: '900', color: '#9CA3AF', letterSpacing: 2, marginBottom: 4 },
   summaryValue: { fontSize: normalize(20), fontWeight: '900', color: colors.white, letterSpacing: -0.5 },
   summaryDivider: { width: 1, height: 24, backgroundColor: '#374151' },
   list: { paddingHorizontal: spacing.xl },
-  card: { 
-    backgroundColor: '#fff', 
-    padding: spacing.md, 
-    borderRadius: radius.xs, 
-    marginBottom: spacing.sm,
-    borderWidth: 1,
-    borderColor: '#F3F4F6'
-  },
+  card: { backgroundColor: '#fff', padding: spacing.md, borderRadius: radius.xs, marginBottom: spacing.sm, borderWidth: 1, borderColor: '#F3F4F6' },
   cardContent: { flexDirection: 'row', alignItems: 'center' },
   statusIndicator: { width: 4, height: 32, borderRadius: 2, marginRight: 12 },
   info: { flex: 1 },
   name: { fontSize: normalize(12), fontWeight: '900', color: colors.text, letterSpacing: 0.5 },
   amount: { fontSize: normalize(10), color: '#9CA3AF', fontWeight: '700', marginTop: 2 },
   methodTag: { fontSize: normalize(8), fontWeight: '900', color: '#10B981', marginTop: 4, letterSpacing: 0.5 },
-  actionBtn: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    gap: 8, 
-    paddingHorizontal: 12, 
-    paddingVertical: 8, 
-    borderRadius: 4,
-    minWidth: 100,
-    justifyContent: 'center'
-  },
+  callLink: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
+  callText: { fontSize: normalize(8), fontWeight: '900', color: '#3B82F6', letterSpacing: 1 },
+  actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 4, minWidth: 100, justifyContent: 'center' },
   actionBtnPaid: { backgroundColor: '#10B981' },
   actionBtnUnpaid: { backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#F3F4F6' },
   actionText: { fontSize: normalize(10), fontWeight: '900', letterSpacing: 1 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContent: { 
-    backgroundColor: colors.white, 
-    borderTopLeftRadius: 24, 
-    borderTopRightRadius: 24, 
-    padding: spacing.xl,
-    paddingBottom: Platform.OS === 'ios' ? spacing.xxl : spacing.xl
-  },
+  modalContent: { backgroundColor: colors.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.xl, paddingBottom: Platform.OS === 'ios' ? spacing.xxl : spacing.xl },
   modalHandle: { width: 40, height: 4, backgroundColor: '#E5E7EB', borderRadius: 2, alignSelf: 'center', marginBottom: spacing.lg },
   modalTitle: { fontSize: normalize(10), fontWeight: '900', color: '#9CA3AF', letterSpacing: 2, marginBottom: 8, textAlign: 'center' },
   modalName: { fontSize: normalize(24), fontWeight: '900', color: colors.text, letterSpacing: -1, marginBottom: spacing.xl, textAlign: 'center' },
@@ -361,16 +298,7 @@ const styles = StyleSheet.create({
   cancelText: { fontSize: normalize(12), fontWeight: '900', color: '#9CA3AF', letterSpacing: 1 },
   confirmBtn: { flex: 2, backgroundColor: '#10B981', paddingVertical: 16, borderRadius: radius.xs, alignItems: 'center' },
   confirmText: { fontSize: normalize(12), fontWeight: '900', color: colors.white, letterSpacing: 1 },
-  emptyState: { 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    paddingVertical: 100,
-    backgroundColor: '#F9FAFB', 
-    borderRadius: radius.xs,
-    borderStyle: 'dashed',
-    borderWidth: 2,
-    borderColor: '#E5E7EB'
-  },
+  emptyState: { alignItems: 'center', justifyContent: 'center', paddingVertical: 100, backgroundColor: '#F9FAFB', borderRadius: radius.xs, borderStyle: 'dashed', borderWidth: 2, borderColor: '#E5E7EB' },
   emptyText: { fontSize: normalize(16), fontWeight: '800', color: '#9CA3AF', marginTop: 12 },
   emptySub: { fontSize: normalize(12), color: '#D1D5DB', textAlign: 'center', marginTop: 8 }
 });

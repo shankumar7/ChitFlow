@@ -22,11 +22,11 @@ const MemberCard = ({ member, onPress, opacity, index }) => (
   }) }] }]}>
     <Pressable onPress={() => onPress(member)} style={styles.memberCardInner}>
       <View style={styles.memberAvatar}>
-        <Text style={styles.avatarText}>{member.name.charAt(0).toUpperCase()}</Text>
+        <Text style={styles.avatarText}>{(member?.name || '?').charAt(0).toUpperCase()}</Text>
       </View>
       <View style={styles.memberInfo}>
-        <Text style={styles.memberName}>{member.name.toUpperCase()}</Text>
-        <Text style={styles.memberPhone}>{member.phone}</Text>
+        <Text style={styles.memberName}>{(member?.name || 'Unknown').toUpperCase()}</Text>
+        <Text style={styles.memberPhone}>{member?.phone || 'No Phone'}</Text>
       </View>
       <MaterialCommunityIcons name="chevron-right" size={24} color="#D1D5DB" />
     </Pressable>
@@ -40,7 +40,6 @@ export default function MemberListScreen({ route, navigation }) {
   const [loading, setLoading] = useState(true);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  // Smart fallback for status bar height
   const safeTop = insets.top || StatusBar.currentHeight || 30;
 
   useEffect(() => {
@@ -55,7 +54,6 @@ export default function MemberListScreen({ route, navigation }) {
   return (
     <View style={styles.container}>
       <StatusBar translucent={true} backgroundColor="transparent" barStyle="dark-content" />
-      
       <View style={styles.verticalSpine} />
       
       <ScrollView 
@@ -69,10 +67,10 @@ export default function MemberListScreen({ route, navigation }) {
           </Pressable>
           <Text style={styles.step}>CHITTI GROUP</Text>
           <View style={styles.brandTitleContainer}>
-            <Text style={styles.titleHeavy}>{groupName.split(' ')[0]}</Text>
-            <Text style={styles.titleLight}>{groupName.split(' ').slice(1).join(' ') || 'Circle'}</Text>
+            <Text style={styles.titleHeavy}>{(groupName || 'Chitti').split(' ')[0]}</Text>
+            <Text style={styles.titleLight}>{(groupName || '').split(' ').slice(1).join(' ') || 'Circle'}</Text>
           </View>
-          <Text style={styles.monthlyNote}>₹ {monthlyAmount.toLocaleString()} MONTHLY FLOW</Text>
+          <Text style={styles.monthlyNote}>₹ {(monthlyAmount || 0).toLocaleString()} MONTHLY FLOW</Text>
         </View>
 
         <View style={styles.section}>
@@ -109,7 +107,6 @@ export default function MemberListScreen({ route, navigation }) {
         </View>
       </ScrollView>
 
-      {/* THE ABSOLUTE SHIELD */}
       <View style={[styles.topBlocker, { height: safeTop }]} />
     </View>
   );
@@ -117,14 +114,7 @@ export default function MemberListScreen({ route, navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white },
-  topBlocker: { 
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: colors.white, 
-    zIndex: 9999, 
-  },
+  topBlocker: { position: 'absolute', top: 0, left: 0, right: 0, backgroundColor: colors.white, zIndex: 9999 },
   verticalSpine: { position: 'absolute', left: spacing.xl + normalize(4), top: 0, bottom: 0, width: 1, backgroundColor: '#F3F4F6' },
   header: { marginBottom: spacing.xl },
   backBtn: { marginBottom: spacing.md, marginLeft: -4 },
@@ -140,30 +130,13 @@ const styles = StyleSheet.create({
   addBtn: { backgroundColor: colors.text, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 4, gap: 4 },
   addBtnText: { color: colors.white, fontSize: normalize(10), fontWeight: '900', letterSpacing: 1 },
   memberCard: { marginBottom: spacing.sm },
-  memberCardInner: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    backgroundColor: '#fff', 
-    padding: spacing.md, 
-    borderRadius: radius.xs,
-    borderWidth: 1,
-    borderColor: '#F3F4F6'
-  },
+  memberCardInner: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: spacing.md, borderRadius: radius.xs, borderWidth: 1, borderColor: '#F3F4F6' },
   memberAvatar: { width: 44, height: 44, backgroundColor: '#F3F4F6', borderRadius: 22, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
   avatarText: { fontSize: normalize(18), fontWeight: '900', color: colors.text },
   memberInfo: { flex: 1 },
   memberName: { fontSize: normalize(14), fontWeight: '900', color: colors.text, letterSpacing: 0.5 },
   memberPhone: { fontSize: normalize(10), color: '#9CA3AF', fontWeight: '700', marginTop: 2 },
-  emptyState: { 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    paddingVertical: 80,
-    backgroundColor: '#F9FAFB',
-    borderRadius: radius.md,
-    borderStyle: 'dashed',
-    borderWidth: 2,
-    borderColor: '#E5E7EB'
-  },
+  emptyState: { alignItems: 'center', justifyContent: 'center', paddingVertical: 80, backgroundColor: '#F9FAFB', borderRadius: radius.md, borderStyle: 'dashed', borderWidth: 2, borderColor: '#E5E7EB' },
   emptyText: { fontSize: normalize(16), fontWeight: '800', color: '#9CA3AF', marginTop: 12 },
   emptySub: { fontSize: normalize(12), color: '#D1D5DB', textAlign: 'center', marginTop: 8, paddingHorizontal: 40 }
 });

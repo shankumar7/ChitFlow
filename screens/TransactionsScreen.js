@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { 
   StyleSheet, 
   Text, 
@@ -36,8 +36,8 @@ const AuditCard = ({ group, members, payments, opacity, index }) => {
           <MaterialCommunityIcons name="layers" size={24} color={colors.text} />
         </View>
         <View style={styles.groupInfo}>
-          <Text style={styles.groupName}>{group.name.toUpperCase()}</Text>
-          <Text style={styles.groupSub}>₹ {group.monthlyAmount.toLocaleString()} / MEMBER</Text>
+          <Text style={styles.groupName}>{(group?.name || 'UNKNOWN').toUpperCase()}</Text>
+          <Text style={styles.groupSub}>₹ {(group?.monthlyAmount || 0).toLocaleString()} / MEMBER</Text>
         </View>
         <View style={styles.statusBadge}>
           <Text style={styles.statusText}>{paidCount}/{totalMembers} PAID</Text>
@@ -58,7 +58,7 @@ const AuditCard = ({ group, members, payments, opacity, index }) => {
         <View style={styles.statBox}>
           <Text style={styles.statLabel}>PENDING</Text>
           <Text style={[styles.statValue, { color: '#EF4444' }]}>
-            ₹ {((totalMembers - paidCount) * group.monthlyAmount).toLocaleString()}
+            ₹ {((totalMembers - paidCount) * (group?.monthlyAmount || 0)).toLocaleString()}
           </Text>
         </View>
       </View>
@@ -80,13 +80,13 @@ const TransactionItem = ({ item, members, groups }) => {
         />
       </View>
       <View style={styles.txInfo}>
-        <Text style={styles.txName}>{member?.name.toUpperCase() || 'UNKNOWN'}</Text>
-        <Text style={styles.txSub}>{group?.name.toUpperCase() || 'GROUP'} • {getMonthName(item.monthNumber).toUpperCase()}</Text>
+        <Text style={styles.txName}>{(member?.name || 'UNKNOWN').toUpperCase()}</Text>
+        <Text style={styles.txSub}>{(group?.name || 'GROUP').toUpperCase()} • {getMonthName(item.monthNumber).toUpperCase()}</Text>
         {item.remarks ? <Text style={styles.txRemarks}>"{item.remarks}"</Text> : null}
       </View>
       <View style={styles.txAmountBox}>
-        <Text style={styles.txAmount}>₹ {item.amount.toLocaleString()}</Text>
-        <Text style={styles.txMethod}>{item.method.toUpperCase()}</Text>
+        <Text style={styles.txAmount}>₹ {(item.amount || 0).toLocaleString()}</Text>
+        <Text style={styles.txMethod}>{(item.method || 'UPI').toUpperCase()}</Text>
       </View>
     </View>
   );
@@ -98,6 +98,7 @@ export default function TransactionsScreen() {
   const [members, setMembers] = useState([]);
   const [payments, setPayments] = useState([]);
   const [recentTx, setRecentTx] = useState([]);
+  const [filterGroupId, setFilterGroupId] = useState(null);
   const [loading, setLoading] = useState(true);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -123,6 +124,11 @@ export default function TransactionsScreen() {
     };
   }, []);
 
+  const filteredTx = useMemo(() => {
+    if (!filterGroupId) return recentTx;
+    return recentTx.filter(tx => tx.groupId === filterGroupId);
+  }, [recentTx, filterGroupId]);
+
   return (
     <View style={styles.container}>
       <StatusBar translucent={true} backgroundColor="transparent" barStyle="dark-content" />
@@ -147,7 +153,7 @@ export default function TransactionsScreen() {
         ) : (
           <>
             <View style={styles.section}>
-              <Text style={styles.sectionLabel}>GROUP STATUS</Text>
+              <Text style={styles.sectionLabel}>GROUP PERFORMANCE</Text>
               {groups.length > 0 ? (
                 groups.map((group, index) => (
                   <AuditCard 
@@ -163,14 +169,39 @@ export default function TransactionsScreen() {
             </View>
 
             <View style={styles.historySection}>
-              <Text style={styles.sectionLabel}>RECENT TRANSACTIONS</Text>
+              <View style={styles.historyHeader}>
+                <Text style={styles.sectionLabel}>RECENT COLLECTIONS</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
+                  <Pressable 
+                    style={[styles.filterBtn, !filterGroupId && styles.filterBtnActive]}
+                    onPress={() => setFilterGroupId(null)}
+                  >
+                    <Text style={[styles.filterText, !filterGroupId && styles.filterTextActive]}>ALL</Text>
+                  </Pressable>
+                  {groups.map(g => (
+                    <Pressable 
+                      key={g.id}
+                      style={[styles.filterBtn, filterGroupId === g.id && styles.filterBtnActive]}
+                      onPress={() => setFilterGroupId(g.id)}
+                    >
+                      <Text style={[styles.filterText, filterGroupId === g.id && styles.filterTextActive]}>
+                        {g.name.toUpperCase()}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </View>
+
               <View style={styles.historyCard}>
-                {recentTx.length > 0 ? (
-                  recentTx.map((tx) => (
+                {filteredTx.length > 0 ? (
+                  filteredTx.map((tx) => (
                     <TransactionItem key={tx.id} item={tx} members={members} groups={groups} />
                   ))
                 ) : (
-                  <Text style={styles.emptyHistory}>No payment activity recorded yet.</Text>
+                  <View style={styles.emptyHistoryWrap}>
+                    <MaterialCommunityIcons name="filter-variant-remove" size={32} color="#E5E7EB" />
+                    <Text style={styles.emptyHistory}>No matching records found.</Text>
+                  </View>
                 )}
               </View>
             </View>
@@ -215,6 +246,12 @@ const styles = StyleSheet.create({
   statValue: { fontSize: normalize(16), fontWeight: '900', color: colors.text },
   divider: { width: 1, height: 24, backgroundColor: '#F3F4F6', marginHorizontal: spacing.md },
   historySection: { marginBottom: spacing.xl },
+  historyHeader: { marginBottom: spacing.lg },
+  filterScroll: { marginTop: spacing.sm },
+  filterBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 4, marginRight: 8, backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#F3F4F6' },
+  filterBtnActive: { backgroundColor: colors.text, borderColor: colors.text },
+  filterText: { fontSize: normalize(10), fontWeight: '900', color: '#9CA3AF', letterSpacing: 1 },
+  filterTextActive: { color: colors.white },
   historyCard: { backgroundColor: '#fff', borderRadius: radius.xs, borderWidth: 1, borderColor: '#F3F4F6', padding: spacing.md },
   txRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F9FAFB' },
   txIcon: { width: 32, height: 32, backgroundColor: '#F0FDF4', borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
@@ -225,5 +262,6 @@ const styles = StyleSheet.create({
   txAmountBox: { alignItems: 'flex-end' },
   txAmount: { fontSize: normalize(14), fontWeight: '900', color: '#10B981' },
   txMethod: { fontSize: normalize(8), fontWeight: '900', color: '#9CA3AF', marginTop: 2 },
-  emptyHistory: { fontSize: normalize(10), color: '#D1D5DB', textAlign: 'center', paddingVertical: 20, fontWeight: '700' }
+  emptyHistoryWrap: { alignItems: 'center', paddingVertical: 40 },
+  emptyHistory: { fontSize: normalize(10), color: '#D1D5DB', textAlign: 'center', marginTop: 12, fontWeight: '700' }
 });

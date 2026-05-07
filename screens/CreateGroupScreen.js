@@ -23,15 +23,22 @@ export default function CreateGroupScreen({ navigation }) {
   const [name, setName] = useState('');
   const [monthlyAmount, setMonthlyAmount] = useState('');
   const [duration, setDuration] = useState('');
+  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]); // Default to today
   const [loading, setLoading] = useState(false);
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
-  // Smart fallback for status bar height
   const safeTop = insets.top || StatusBar.currentHeight || 30;
 
   const handleCreate = async () => {
-    if (!name || !monthlyAmount || !duration) {
-      Alert.alert("Incomplete", "Please define all group parameters.");
+    if (!name || !monthlyAmount || !duration || !startDate) {
+      Alert.alert("Incomplete", "Please define all group parameters, including the start date.");
+      return;
+    }
+
+    // Validate date format YYYY-MM-DD
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(startDate)) {
+      Alert.alert("Invalid Date", "Please use the format YYYY-MM-DD (e.g. 2026-05-01)");
       return;
     }
 
@@ -41,6 +48,7 @@ export default function CreateGroupScreen({ navigation }) {
         name,
         monthlyAmount: parseFloat(monthlyAmount),
         duration: parseInt(duration),
+        startDate,
         status: 'active',
         createdAt: new Date()
       });
@@ -59,7 +67,6 @@ export default function CreateGroupScreen({ navigation }) {
       style={styles.container}
     >
       <StatusBar translucent={true} backgroundColor="transparent" barStyle="dark-content" />
-      
       <View style={styles.verticalSpine} />
       
       <ScrollView 
@@ -88,6 +95,17 @@ export default function CreateGroupScreen({ navigation }) {
                 placeholderTextColor="#9CA3AF"
                 value={name}
                 onChangeText={setName}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>START DATE (YYYY-MM-DD)</Text>
+              <TextInput 
+                style={styles.input}
+                placeholder="2026-05-01"
+                placeholderTextColor="#9CA3AF"
+                value={startDate}
+                onChangeText={setStartDate}
               />
             </View>
 
@@ -137,7 +155,6 @@ export default function CreateGroupScreen({ navigation }) {
         </Animated.View>
       </ScrollView>
 
-      {/* THE ABSOLUTE SHIELD */}
       <View style={[styles.topBlocker, { height: safeTop }]} />
     </KeyboardAvoidingView>
   );
@@ -145,14 +162,7 @@ export default function CreateGroupScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white },
-  topBlocker: { 
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: colors.white, 
-    zIndex: 9999, 
-  },
+  topBlocker: { position: 'absolute', top: 0, left: 0, right: 0, backgroundColor: colors.white, zIndex: 9999 },
   verticalSpine: { position: 'absolute', left: spacing.xl + normalize(4), top: 0, bottom: 0, width: 1, backgroundColor: '#F3F4F6' },
   header: { marginBottom: spacing.xl },
   backBtn: { marginBottom: spacing.md, marginLeft: -4 },
@@ -165,29 +175,8 @@ const styles = StyleSheet.create({
   form: { marginTop: spacing.lg },
   inputGroup: { marginBottom: spacing.xl },
   label: { fontSize: normalize(8), fontWeight: '900', color: '#9CA3AF', letterSpacing: 1.5, marginBottom: 8 },
-  input: { 
-    fontSize: normalize(16), 
-    fontWeight: '700', 
-    color: colors.text, 
-    borderBottomWidth: 2, 
-    borderBottomColor: '#F3F4F6', 
-    paddingVertical: 12,
-    letterSpacing: 0.5
-  },
-  submitBtn: { 
-    backgroundColor: colors.text, 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    gap: 12, 
-    paddingVertical: normalize(18), 
-    borderRadius: radius.xs,
-    marginTop: spacing.xl,
-    ...Platform.select({
-      web: { boxShadow: '0 8px 24px rgba(0,0,0,0.15)' },
-      default: { shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 8 }
-    })
-  },
+  input: { fontSize: normalize(16), fontWeight: '700', color: colors.text, borderBottomWidth: 2, borderBottomColor: '#F3F4F6', paddingVertical: 12, letterSpacing: 0.5 },
+  submitBtn: { backgroundColor: colors.text, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, paddingVertical: normalize(18), borderRadius: radius.xs, marginTop: spacing.xl },
   submitBtnPressed: { transform: [{ scale: 0.98 }], opacity: 0.9 },
   submitBtnDisabled: { opacity: 0.5 },
   submitBtnText: { color: colors.white, fontSize: normalize(12), fontWeight: '900', letterSpacing: 2 }

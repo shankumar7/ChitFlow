@@ -14,145 +14,159 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { subscribeGroups } from '../services/groupService';
+import { subscribeAllMembers } from '../services/memberService';
 import { subscribeAllPaymentsByMonth } from '../services/paymentService';
 import { getCurrentMonthNumber } from '../utils/date';
 import { colors, spacing, radius, normalize, layout } from '../utils/theme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-const SummaryCard = ({ title, value, icon, color, opacity, translateY }) => (
-  <Animated.View style={[styles.card, { opacity, transform: [{ translateY }] }]}>
-    <View style={styles.cardHeader}>
-      <Text style={styles.cardLabel}>{title}</Text>
-      <MaterialCommunityIcons name={icon} size={20} color={color} />
-    </View>
-    <Text style={styles.cardValue}>{value}</Text>
-  </Animated.View>
-);
+const PerformanceCard = ({ group, members, payments, index, navigation }) => {
+  const groupMembers = members.filter(m => m.groupId === group.id);
+  const groupPayments = payments.filter(p => p.groupId === group.id);
+  const totalMembers = groupMembers.length;
+  const paidCount = groupPayments.length;
+  const pendingCount = totalMembers - paidCount;
+  
+  if (totalMembers === 0) return null;
 
-const GroupCard = ({ group, onPress, opacity, index }) => (
-  <Animated.View style={[styles.groupCard, { opacity, transform: [{ translateY: opacity.interpolate({
-    inputRange: [0, 1],
-    outputRange: [20 * (index + 1), 0]
-  }) }] }]}>
-    <Pressable onPress={() => onPress(group)} style={styles.groupCardInner}>
-      <View style={styles.groupIcon}>
-        <MaterialCommunityIcons name="folder-outline" size={24} color={colors.text} />
+  return (
+    <Pressable 
+      onPress={() => navigation.navigate('Groups')}
+      style={styles.perfCard}
+    >
+      <View style={styles.perfInfo}>
+        <Text style={styles.perfName}>{(group?.name || 'GROUP').toUpperCase()}</Text>
+        <Text style={styles.perfSub}>{pendingCount} MEMBERS PENDING</Text>
       </View>
-      <View style={styles.groupInfo}>
-        <Text style={styles.groupName}>{group.name.toUpperCase()}</Text>
-        <Text style={styles.groupSub}>₹ {group.monthlyAmount.toLocaleString()} • {group.duration} MONTHS</Text>
+      <View style={styles.perfAction}>
+        <View style={[styles.perfBadge, { backgroundColor: pendingCount > 0 ? '#FEF2F2' : '#F0FDF4' }]}>
+          <Text style={[styles.perfBadgeText, { color: pendingCount > 0 ? '#EF4444' : '#10B981' }]}>
+            {pendingCount > 0 ? `₹ ${(pendingCount * (group?.monthlyAmount || 0)).toLocaleString()}` : 'CLEARED'}
+          </Text>
+        </View>
       </View>
-      <MaterialCommunityIcons name="chevron-right" size={24} color="#D1D5DB" />
     </Pressable>
-  </Animated.View>
-);
+  );
+};
 
 export default function DashboardScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const [groups, setGroups] = useState([]);
-  const [monthlyCollections, setMonthlyCollections] = useState([]);
+  const [members, setMembers] = useState([]);
+  const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(20)).current;
 
-  // Use a smart fallback for status bar height
   const safeTop = insets.top || StatusBar.currentHeight || 30;
+  const currentMonth = getCurrentMonthNumber();
 
+  // Exit Prevention - Safe for all platforms
   useFocusEffect(
     useCallback(() => {
+      if (Platform.OS === 'web') return;
+      
       const onBackPress = () => true;
-      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
-      return () => subscription.remove();
+      try {
+        BackHandler.addEventListener('hardwareBackPress', onBackPress);
+        return () => {
+          if (BackHandler?.removeEventListener) {
+            BackHandler.removeEventListener('hardwareBackPress', onBackPress);
+          }
+        };
+      } catch (e) {
+        console.warn("BackHandler error suppressed:", e);
+      }
     }, [])
   );
 
   useEffect(() => {
-    const currentMonth = getCurrentMonthNumber();
-    const unsubGroups = subscribeGroups((data) => {
-      setGroups(data);
+    const unsubGroups = subscribeGroups(setGroups);
+    const unsubMembers = subscribeAllMembers(setMembers);
+    const unsubPayments = subscribeAllPaymentsByMonth(currentMonth, setPayments);
+
+    setTimeout(() => {
       setLoading(false);
-      startAnimations();
-    });
-    const unsubPayments = subscribeAllPaymentsByMonth(currentMonth, (data) => {
-      setMonthlyCollections(data);
-    });
+      Animated.timing(fadeAnim, { 
+        toValue: 1, 
+        duration: 800, 
+        useNativeDriver: Platform.OS !== 'web' 
+      }).start();
+    }, 1200);
+
     return () => {
       unsubGroups();
+      unsubMembers();
       unsubPayments();
     };
   }, []);
 
-  const startAnimations = () => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
-      Animated.timing(slideAnim, { toValue: 0, duration: 800, useNativeDriver: true }),
-    ]).start();
+  const stats = {
+    totalGroups: groups.length,
+    totalMembers: members.length,
+    monthlyCollection: payments.reduce((sum, p) => sum + (p.amount || 0), 0)
   };
-
-  const totalCollectedSoFar = monthlyCollections.reduce((sum, p) => sum + (p.amount || 0), 0);
 
   return (
     <View style={styles.container}>
       <StatusBar translucent={true} backgroundColor="transparent" barStyle="dark-content" />
-      
       <View style={styles.verticalSpine} />
       
       <ScrollView 
         style={styles.scrollView} 
-        contentContainerStyle={[styles.scrollContent, { paddingTop: safeTop + 20, paddingBottom: insets.bottom + 120 }]}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: safeTop + 20, paddingBottom: 120 }]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <View style={styles.brandContainer}>
-            <Text style={styles.titleHeavy}>Chit</Text>
-            <Text style={styles.titleLight}>Flow</Text>
-          </View>
-        </View>
-
-        <View style={styles.summaryGrid}>
-          <SummaryCard 
-            title="MONTHLY FLOW (COLLECTED)" 
-            value={`₹ ${totalCollectedSoFar.toLocaleString()}`} 
-            icon="cash-multiple" 
-            color="#10B981" 
-            opacity={fadeAnim} 
-            translateY={slideAnim} 
-          />
-          <SummaryCard 
-            title="ACTIVE CHITTI GROUPS" 
-            value={groups.length.toString()} 
-            icon="layers-outline" 
-            color="#3B82F6" 
-            opacity={fadeAnim} 
-            translateY={slideAnim} 
-          />
-        </View>
-
-        <Animated.View style={[styles.section, { opacity: fadeAnim }]}>
-          <Text style={styles.sectionLabel}>RECENT GROUPS</Text>
-          {loading ? (
-            <ActivityIndicator size="small" color={colors.text} style={{ marginTop: 20 }} />
-          ) : groups.length > 0 ? (
-            groups.slice(0, 3).map((group, index) => (
-              <GroupCard 
-                key={group.id} 
-                group={group} 
-                index={index}
-                opacity={fadeAnim}
-                onPress={() => navigation.navigate('MemberList', { groupId: group.id, groupName: group.name, monthlyAmount: group.monthlyAmount })} 
-              />
-            ))
-          ) : (
-            <View style={styles.emptyState}>
-              <MaterialCommunityIcons name="playlist-remove" size={48} color="#E5E7EB" />
-              <Text style={styles.emptyText}>No Active Chits</Text>
-              <Text style={styles.emptySub}>Initialize a group to start managing collections.</Text>
+        <Animated.View style={{ opacity: fadeAnim }}>
+          <View style={styles.header}>
+            <Text style={styles.step}>MANAGER DASHBOARD</Text>
+            <View style={styles.brandTitleContainer}>
+              <Text style={styles.titleHeavy}>Chit</Text>
+              <Text style={styles.titleLight}>Flow</Text>
             </View>
-          )}
+          </View>
+
+          <View style={styles.statsGrid}>
+            <View style={styles.statMain}>
+              <Text style={styles.statLabel}>MONTHLY REVENUE</Text>
+              <Text style={styles.statValueLarge}>₹ {stats.monthlyCollection.toLocaleString()}</Text>
+            </View>
+            <View style={styles.statRow}>
+              <View style={styles.statSmall}>
+                <Text style={styles.statLabel}>GROUPS</Text>
+                <Text style={styles.statValueSmall}>{stats.totalGroups}</Text>
+              </View>
+              <View style={styles.statSmall}>
+                <Text style={styles.statLabel}>MEMBERS</Text>
+                <Text style={styles.statValueSmall}>{stats.totalMembers}</Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionLabel}>PENDING PERFORMANCE</Text>
+              <MaterialCommunityIcons name="alert-decagram-outline" size={16} color="#EF4444" />
+            </View>
+            {groups.length > 0 ? (
+              groups.map((group, index) => (
+                <PerformanceCard 
+                  key={group.id} 
+                  group={group} 
+                  members={members} 
+                  payments={payments} 
+                  index={index} 
+                  navigation={navigation}
+                />
+              ))
+            ) : (
+              <View style={styles.emptyBox}>
+                <Text style={styles.emptyText}>No Active Circles</Text>
+              </View>
+            )}
+          </View>
         </Animated.View>
       </ScrollView>
 
-      {/* THE ABSOLUTE SHIELD: Positioned last to ensure it covers everything else */}
       <View style={[styles.topBlocker, { height: safeTop }]} />
     </View>
   );
@@ -160,64 +174,31 @@ export default function DashboardScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white },
-  topBlocker: { 
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: colors.white, 
-    zIndex: 9999, // Absolute priority
-  },
+  topBlocker: { position: 'absolute', top: 0, left: 0, right: 0, backgroundColor: colors.white, zIndex: 9999 },
   verticalSpine: { position: 'absolute', left: spacing.xl + normalize(4), top: 0, bottom: 0, width: 1, backgroundColor: '#F3F4F6' },
-  header: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
-    paddingBottom: spacing.md,
-    marginBottom: spacing.md
-  },
-  brandContainer: { flexDirection: 'row', alignItems: 'baseline', marginLeft: -2 },
-  titleHeavy: { fontSize: normalize(28), fontWeight: '900', color: colors.text, letterSpacing: -1 },
-  titleLight: { fontSize: normalize(28), fontWeight: '200', color: colors.text, letterSpacing: -0.5 },
+  header: { marginBottom: spacing.xl },
+  step: { fontSize: normalize(10), fontWeight: '900', color: '#9CA3AF', letterSpacing: 2, marginBottom: 4 },
+  brandTitleContainer: { flexDirection: 'row', alignItems: 'baseline', marginLeft: -2 },
+  titleHeavy: { fontSize: normalize(54), fontWeight: '900', color: colors.text, letterSpacing: -3 },
+  titleLight: { fontSize: normalize(54), fontWeight: '200', color: colors.text, letterSpacing: -2 },
   scrollView: { flex: 1 },
   scrollContent: { paddingHorizontal: spacing.xl },
-  summaryGrid: { gap: spacing.md, marginBottom: spacing.xxl },
-  card: { 
-    backgroundColor: '#fff', 
-    padding: spacing.lg, 
-    borderRadius: radius.xs,
-    borderWidth: 1,
-    borderColor: '#F3F4F6'
-  },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  cardLabel: { fontSize: normalize(10), fontWeight: '800', color: '#9CA3AF', letterSpacing: 1.5 },
-  cardValue: { fontSize: normalize(32), fontWeight: '900', color: colors.text, letterSpacing: -1 },
-  section: { marginTop: spacing.xl },
-  sectionLabel: { fontSize: normalize(10), fontWeight: '900', color: '#9CA3AF', letterSpacing: 2, marginBottom: spacing.lg },
-  groupCard: { marginBottom: spacing.sm },
-  groupCardInner: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    backgroundColor: '#fff', 
-    padding: spacing.md, 
-    borderRadius: radius.xs,
-    borderWidth: 1,
-    borderColor: '#F3F4F6'
-  },
-  groupIcon: { width: 44, height: 44, backgroundColor: '#F9FAFB', borderRadius: 4, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-  groupInfo: { flex: 1 },
-  groupName: { fontSize: normalize(14), fontWeight: '900', color: colors.text, letterSpacing: 0.5 },
-  groupSub: { fontSize: normalize(10), color: '#9CA3AF', fontWeight: '700', marginTop: 2 },
-  emptyState: { 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    paddingVertical: 60,
-    backgroundColor: '#F9FAFB',
-    borderRadius: radius.md,
-    borderStyle: 'dashed',
-    borderWidth: 2,
-    borderColor: '#E5E7EB'
-  },
-  emptyText: { fontSize: normalize(16), fontWeight: '800', color: '#9CA3AF', marginTop: 12 },
-  emptySub: { fontSize: normalize(12), color: '#D1D5DB', textAlign: 'center', marginTop: 8, paddingHorizontal: 40 }
+  statsGrid: { marginBottom: spacing.xxl },
+  statMain: { backgroundColor: colors.text, padding: spacing.lg, borderRadius: radius.xs, marginBottom: spacing.sm },
+  statRow: { flexDirection: 'row', gap: spacing.sm },
+  statSmall: { flex: 1, backgroundColor: '#F9FAFB', padding: spacing.lg, borderRadius: radius.xs, borderWidth: 1, borderColor: '#F3F4F6' },
+  statLabel: { fontSize: normalize(8), fontWeight: '900', color: '#9CA3AF', letterSpacing: 1.5, marginBottom: 8 },
+  statValueLarge: { fontSize: normalize(32), fontWeight: '900', color: colors.white, letterSpacing: -1 },
+  statValueSmall: { fontSize: normalize(24), fontWeight: '900', color: colors.text },
+  section: { marginBottom: spacing.xl },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: spacing.lg },
+  sectionLabel: { fontSize: normalize(10), fontWeight: '900', color: '#9CA3AF', letterSpacing: 2 },
+  perfCard: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F9FAFB' },
+  perfInfo: { flex: 1 },
+  perfName: { fontSize: normalize(12), fontWeight: '900', color: colors.text, letterSpacing: 0.5 },
+  perfSub: { fontSize: normalize(9), fontWeight: '700', color: '#9CA3AF', marginTop: 2 },
+  perfBadge: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 4 },
+  perfBadgeText: { fontSize: normalize(10), fontWeight: '900' },
+  emptyBox: { padding: 40, alignItems: 'center', backgroundColor: '#F9FAFB', borderRadius: radius.xs, borderStyle: 'dashed', borderWidth: 2, borderColor: '#E5E7EB' },
+  emptyText: { fontSize: normalize(12), fontWeight: '800', color: '#D1D5DB' }
 });

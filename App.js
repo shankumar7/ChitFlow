@@ -11,6 +11,7 @@ import WelcomeScreen from './screens/WelcomeScreen';
 import RegisterScreen from './screens/RegisterScreen';
 import DashboardScreen from './screens/DashboardScreen';
 import GroupListScreen from './screens/GroupListScreen';
+import CollectionFeedScreen from './screens/CollectionFeedScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import TransactionsScreen from './screens/TransactionsScreen';
 import CreateGroupScreen from './screens/CreateGroupScreen';
@@ -31,11 +32,20 @@ function MainTabs() {
         headerShown: false,
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;
-          if (route.name === 'Home') iconName = focused ? 'home' : 'home-outline';
-          else if (route.name === 'Groups') iconName = focused ? 'layers' : 'layers-outline';
-          else if (route.name === 'Ledger') iconName = focused ? 'finance' : 'finance';
-          else if (route.name === 'Profile') iconName = focused ? 'account' : 'account-outline';
-          return <MaterialCommunityIcons name={iconName} size={24} color={color} />;
+          if (focused) {
+            if (route.name === 'Home') iconName = 'home-variant';
+            else if (route.name === 'Groups') iconName = 'layers-triple';
+            else if (route.name === 'Collection') iconName = 'lightning-bolt';
+            else if (route.name === 'Ledger') iconName = 'book-open-variant';
+            else if (route.name === 'Profile') iconName = 'account-circle';
+          } else {
+            if (route.name === 'Home') iconName = 'home-variant-outline';
+            else if (route.name === 'Groups') iconName = 'layers-triple-outline';
+            else if (route.name === 'Collection') iconName = 'lightning-bolt-outline';
+            else if (route.name === 'Ledger') iconName = 'book-outline';
+            else if (route.name === 'Profile') iconName = 'account-outline';
+          }
+          return <MaterialCommunityIcons name={iconName} size={22} color={color} />;
         },
         tabBarActiveTintColor: colors.text,
         tabBarInactiveTintColor: '#9CA3AF',
@@ -43,8 +53,8 @@ function MainTabs() {
           backgroundColor: '#FFFFFF',
           borderTopWidth: 1,
           borderTopColor: '#F3F4F6',
-          height: Platform.OS === 'ios' ? 60 + insets.bottom : 70 + (insets.bottom > 0 ? insets.bottom : 5),
-          paddingBottom: insets.bottom > 0 ? insets.bottom : 12,
+          height: Platform.OS === 'ios' ? 65 + insets.bottom : 75 + (insets.bottom > 0 ? insets.bottom : 5),
+          paddingBottom: insets.bottom > 0 ? insets.bottom : 15,
           paddingTop: 12,
           ...Platform.select({
             web: { boxShadow: '0 -4px 12px rgba(0,0,0,0.05)' },
@@ -52,15 +62,17 @@ function MainTabs() {
           })
         },
         tabBarLabelStyle: {
-          fontSize: normalize(10),
+          fontSize: normalize(8),
           fontWeight: '900',
           letterSpacing: 0.5,
-          marginBottom: 4
+          marginBottom: 4,
+          textTransform: 'uppercase'
         }
       })}
     >
       <Tab.Screen name="Home" component={DashboardScreen} />
       <Tab.Screen name="Groups" component={GroupListScreen} />
+      <Tab.Screen name="Collection" component={CollectionFeedScreen} />
       <Tab.Screen name="Ledger" component={TransactionsScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
