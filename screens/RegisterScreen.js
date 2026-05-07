@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { StyleSheet, Text, View, TextInput, Pressable, Platform, Animated, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, TextInput, Pressable, Platform, Animated, ActivityIndicator, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
@@ -7,9 +7,9 @@ import { colors, spacing, radius, normalize, window, layout } from '../utils/the
 
 export default function RegisterScreen({ navigation }) {
   const [name, setName] = useState('');
+  const [pin, setPin] = useState('');
   const [loading, setLoading] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const inputLine = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const useNative = Platform.OS !== 'web';
@@ -18,47 +18,47 @@ export default function RegisterScreen({ navigation }) {
       duration: 1000,
       useNativeDriver: useNative,
     }).start();
-
-    Animated.timing(inputLine, {
-      toValue: 1,
-      duration: 1200,
-      delay: 400,
-      useNativeDriver: false,
-    }).start();
-  }, [fadeAnim, inputLine]);
+  }, [fadeAnim]);
 
   const handleRegister = async () => {
     if (!name.trim()) return;
+    
+    // Generate random PIN if not provided
+    let finalPin = pin.trim();
+    if (!finalPin) {
+      finalPin = Math.floor(1000 + Math.random() * 9000).toString();
+    } else if (finalPin.length !== 4) {
+      Alert.alert("Invalid PIN", "Please provide a 4-digit PIN or leave it blank for a random one.");
+      return;
+    }
+
     setLoading(true);
 
     try {
-      // 1. Save to Firestore
       const userRef = doc(db, 'users', name.trim().toLowerCase());
       await setDoc(userRef, {
         name: name.trim(),
+        pin: finalPin,
         createdAt: new Date().toISOString(),
         groups: [],
         teams: [],
-        pin: null
       });
 
-      // 2. Persist locally
       await AsyncStorage.setItem('user_name', name.trim());
+      await AsyncStorage.setItem('user_pin', finalPin);
 
-      // 3. Navigate to Dashboard
+      if (!pin.trim()) {
+        Alert.alert("Profile Created", `Your random security PIN is: ${finalPin}. Please remember it.`);
+      }
+
       navigation.replace('Dashboard');
     } catch (error) {
       console.error("Registration error:", error);
-      alert("Failed to create profile. Please try again.");
+      Alert.alert("Error", "Failed to create profile. Please try again.");
     } finally {
       setLoading(false);
     }
   };
-
-  const animatedLineWidth = inputLine.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0%', '100%'],
-  });
 
   return (
     <View style={styles.container}>
@@ -66,21 +66,39 @@ export default function RegisterScreen({ navigation }) {
       
       <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
         <View style={styles.topSection}>
-          <Text style={styles.step}>STEP 01</Text>
-          <Text style={styles.title}>What's your{"\n"}name?</Text>
+          <Text style={styles.step}>ONBOARDING</Text>
+          <Text style={styles.title}>Identification</Text>
         </View>
 
         <View style={styles.inputSection}>
-          <TextInput
-            style={styles.input}
-            placeholder="TYPE HERE"
-            placeholderTextColor="#D1D5DB"
-            value={name}
-            onChangeText={setName}
-            autoFocus
-            autoCapitalize="words"
-          />
-          <Animated.View style={[styles.underline, { width: animatedLineWidth }]} />
+          <View style={styles.field}>
+            <Text style={styles.label}>FULL NAME</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="NAME"
+              placeholderTextColor="#D1D5DB"
+              value={name}
+              onChangeText={setName}
+              autoFocus
+              autoCapitalize="words"
+            />
+            <View style={styles.underline} />
+          </View>
+
+          <View style={[styles.field, { marginTop: spacing.xl }]}>
+            <Text style={styles.label}>SECURITY PIN (OPTIONAL)</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="0000"
+              placeholderTextColor="#D1D5DB"
+              value={pin}
+              onChangeText={setPin}
+              keyboardType="numeric"
+              maxLength={4}
+              secureTextEntry
+            />
+            <View style={styles.underline} />
+          </View>
         </View>
 
         <View style={styles.bottomSection}>
@@ -96,10 +114,9 @@ export default function RegisterScreen({ navigation }) {
             {loading ? (
               <ActivityIndicator color={colors.white} />
             ) : (
-              <Text style={styles.buttonText}>Confirm Identity</Text>
+              <Text style={styles.buttonText}>CONFIRM</Text>
             )}
           </Pressable>
-          <Text style={styles.hint}>NO PASSWORD REQUIRED. JUST YOUR NAME.</Text>
         </View>
       </Animated.View>
     </View>
@@ -120,65 +137,31 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: spacing.xl,
     justifyContent: 'space-between',
-    paddingVertical: window.height * 0.12,
+    paddingVertical: window.height * 0.1,
     ...layout.container,
   },
   topSection: {
     alignItems: 'flex-start',
   },
-  step: {
-    fontSize: normalize(12),
-    fontWeight: '900',
-    color: '#9CA3AF',
-    letterSpacing: 2,
-    marginBottom: spacing.md,
-  },
-  title: {
-    fontSize: normalize(48),
-    fontWeight: '900',
-    color: colors.text,
-    letterSpacing: -2,
-    lineHeight: normalize(54),
-  },
-  inputSection: {
-    marginVertical: spacing.xxl,
-  },
+  step: { fontSize: normalize(12), fontWeight: '900', color: '#9CA3AF', letterSpacing: 2, marginBottom: 8 },
+  title: { fontSize: normalize(44), fontWeight: '900', color: colors.text, letterSpacing: -2 },
+  inputSection: { marginVertical: spacing.xl },
+  field: { marginBottom: spacing.md },
+  label: { fontSize: normalize(10), fontWeight: '800', color: '#9CA3AF', letterSpacing: 1.5, marginBottom: 4 },
   input: {
-    fontSize: normalize(32),
+    fontSize: normalize(28),
     fontWeight: '900',
     color: colors.text,
-    paddingVertical: spacing.md,
-    letterSpacing: -1,
+    paddingVertical: spacing.sm,
+    letterSpacing: 1,
+    ...Platform.select({
+      web: { outlineStyle: 'none' }
+    })
   },
-  underline: {
-    height: 4,
-    backgroundColor: colors.text,
-  },
-  bottomSection: {
-    alignItems: 'flex-start',
-  },
-  button: {
-    backgroundColor: colors.text,
-    paddingVertical: normalize(20),
-    paddingHorizontal: normalize(40),
-    borderRadius: radius.xs,
-    width: '100%',
-    alignItems: 'center',
-  },
+  underline: { height: 3, backgroundColor: colors.text, width: normalize(40) },
+  bottomSection: { alignItems: 'flex-start' },
+  button: { backgroundColor: colors.text, paddingVertical: normalize(20), paddingHorizontal: normalize(40), borderRadius: radius.xs, width: '100%', alignItems: 'center' },
   buttonPressed: { opacity: 0.9, transform: [{ scale: 0.98 }] },
   buttonDisabled: { opacity: 0.2 },
-  buttonText: {
-    color: colors.white,
-    fontSize: normalize(16),
-    fontWeight: '900',
-    letterSpacing: 2,
-    textTransform: 'uppercase',
-  },
-  hint: {
-    marginTop: spacing.lg,
-    fontSize: normalize(10),
-    fontWeight: '800',
-    color: '#9CA3AF',
-    letterSpacing: 1.5,
-  }
+  buttonText: { color: colors.white, fontSize: normalize(18), fontWeight: '900', letterSpacing: 2 },
 });
