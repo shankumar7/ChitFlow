@@ -112,12 +112,12 @@ export default function MemberListScreen({ route, navigation }) {
         )}
       </ScrollView>
 
-      {/* FAB FOR NEW MEMBER - DOCKED ABOVE NAV BAR */}
+      {/* FAB FOR NEW MEMBER - DOCKED ABOVE NAV BAR WITH ACCOUNT ICON */}
       <Pressable 
         style={({ pressed }) => [styles.fab, pressed && { transform: [{ scale: 0.95 }] }]}
         onPress={() => navigation.navigate('AddMember', { groupId })}
       >
-        <MaterialCommunityIcons name="plus" size={32} color={colors.white} />
+        <MaterialCommunityIcons name="account-plus" size={32} color={colors.white} />
       </Pressable>
 
       <View style={[styles.topBlocker, { height: safeTop }]} />
@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
   fab: { 
     position: 'absolute', 
     right: spacing.xl, 
-    bottom: 20, // Perfectly docked above navigation bar
+    bottom: 20, 
     width: 64, 
     height: 64, 
     borderRadius: 32, 

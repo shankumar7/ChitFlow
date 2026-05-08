@@ -16,33 +16,32 @@ const paymentsRef = collection(db, 'payments');
 
 const getPaymentId = ({ groupId, memberId, monthNumber }) => `${groupId}_${memberId}_${monthNumber}`;
 
-export const togglePaymentStatus = async ({ groupId, memberId, month, amount, status, method, remarks, memberName, groupName }) => {
+const togglePaymentStatus = async ({ groupId, memberId, month, amount, status, method, remarks, memberName, groupName }) => {
   const docId = getPaymentId({ groupId, memberId, monthNumber: month });
-  const timestamp = new Date().toISOString(); // High-precision local time for Ledger
+  const timestamp = new Date().toISOString();
   
   return await setDoc(
     doc(db, 'payments', docId),
     {
       groupId,
       memberId,
-      memberName, // Store names for ledger display without extra joins
+      memberName,
       groupName,
       monthNumber: month,
       amount,
       status,
       method: method || 'none',
       remarks: remarks || '',
-      timestamp, // ISO string for immediate display
-      updatedAt: serverTimestamp(), // Firestore sync time
+      timestamp,
+      updatedAt: serverTimestamp(),
     },
     { merge: true }
   );
 };
 
-export const subscribeAllPayments = (onUpdate) => {
+const subscribeAllPaymentsLedger = (onUpdate) => {
   const q = query(paymentsRef, where('status', '==', 'paid'));
   return onSnapshot(q, (snapshot) => {
-    // Sort by timestamp descending
     const data = snapshot.docs
       .map(doc => ({ id: doc.id, ...doc.data() }))
       .sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
@@ -50,7 +49,7 @@ export const subscribeAllPayments = (onUpdate) => {
   });
 };
 
-export const subscribePaymentsByGroupAndMonth = (groupId, monthNumber, onUpdate, onError) => {
+const subscribePaymentsByGroupAndMonth = (groupId, monthNumber, onUpdate, onError) => {
   const q = query(
     paymentsRef,
     where('groupId', '==', groupId),
@@ -65,14 +64,14 @@ export const subscribePaymentsByGroupAndMonth = (groupId, monthNumber, onUpdate,
   );
 };
 
-export const subscribeAllPaymentsByMonth = (monthNumber, onUpdate) => {
+const subscribeAllPaymentsByMonth = (monthNumber, onUpdate) => {
   const q = query(paymentsRef, where('monthNumber', '==', monthNumber), where('status', '==', 'paid'));
   return onSnapshot(q, (snapshot) => {
     onUpdate(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
   });
 };
 
-export const subscribeRecentTransactions = (onUpdate) => {
+const subscribeRecentTransactions = (onUpdate) => {
   const q = query(paymentsRef, where('status', '==', 'paid'));
   return onSnapshot(q, (snapshot) => {
     const sorted = snapshot.docs
@@ -82,7 +81,7 @@ export const subscribeRecentTransactions = (onUpdate) => {
   });
 };
 
-export const getDashboardStats = async (currentMonthNumber) => {
+const getDashboardStats = async (currentMonthNumber) => {
   const [groupsSnap, membersSnap, paymentsSnap] = await Promise.all([
     getCountFromServer(collection(db, 'groups')),
     getCountFromServer(collection(db, 'members')),
@@ -108,4 +107,13 @@ export const getDashboardStats = async (currentMonthNumber) => {
     monthlyCollection,
     recentActivity,
   };
+};
+
+export {
+  togglePaymentStatus,
+  subscribeAllPaymentsLedger,
+  subscribePaymentsByGroupAndMonth,
+  subscribeAllPaymentsByMonth,
+  subscribeRecentTransactions,
+  getDashboardStats
 };

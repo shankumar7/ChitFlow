@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { subscribeMembersByGroup } from '../services/memberService';
+import { subscribeMembers } from '../services/memberService';
 import { subscribePaymentsByGroupAndMonth, togglePaymentStatus } from '../services/paymentService';
 import { getCurrentMonthNumber, getMonthName } from '../utils/date';
 import { colors, spacing, radius, normalize, layout, window } from '../utils/theme';
@@ -39,10 +39,14 @@ export default function PaymentScreen({ route, navigation }) {
   const safeTop = insets.top || StatusBar.currentHeight || 30;
 
   useEffect(() => {
-    const unsubMembers = subscribeMembersByGroup(groupId, (data) => {
+    const unsubMembers = subscribeMembers(groupId, (data) => {
       setMembers(data);
       setLoading(false);
-      Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }).start();
+      Animated.timing(fadeAnim, { 
+        toValue: 1, 
+        duration: 800, 
+        useNativeDriver: Platform.OS !== 'web'
+      }).start();
     });
 
     const unsubPayments = subscribePaymentsByGroupAndMonth(groupId, currentMonth, (data) => {
@@ -85,7 +89,7 @@ export default function PaymentScreen({ route, navigation }) {
   const openIntake = (member) => {
     const existing = payments.find(p => p.memberId === member.id);
     if (existing?.status === 'paid') {
-      handleConfirm(member.id, 'unpaid');
+      handleConfirm(member.id, 'unpaid', member.name);
     } else {
       setSelectedMember(member);
       setMethod('cash');
@@ -94,10 +98,14 @@ export default function PaymentScreen({ route, navigation }) {
     }
   };
 
-  const handleConfirm = async (memberId, status = 'paid') => {
+  const handleConfirm = async (memberId, status = 'paid', mName) => {
+    const finalMemberName = mName || selectedMember?.name || 'Member';
+    
     await togglePaymentStatus({
       groupId,
+      groupName, // Pass group name for ledger
       memberId: memberId || selectedMember.id,
+      memberName: finalMemberName, // Pass member name for ledger
       month: currentMonth,
       amount: monthlyAmount,
       status,
@@ -165,8 +173,8 @@ export default function PaymentScreen({ route, navigation }) {
           </Pressable>
           <Text style={styles.step}>COLLECTION FEED</Text>
           <View style={styles.brandTitleContainer}>
-            <Text style={styles.titleHeavy}>{groupName.split(' ')[0]}</Text>
-            <Text style={styles.titleLight}>{groupName.split(' ').slice(1).join(' ') || 'Ledger'}</Text>
+            <Text style={styles.titleHeavy}>{(groupName || 'Circle').split(' ')[0]}</Text>
+            <Text style={styles.titleLight}>{(groupName || '').split(' ').slice(1).join(' ') || 'Ledger'}</Text>
           </View>
         </View>
 
@@ -216,7 +224,7 @@ export default function PaymentScreen({ route, navigation }) {
           <View style={styles.modalContent}>
             <View style={styles.modalHandle} />
             <Text style={styles.modalTitle}>CONFIRM COLLECTION</Text>
-            <Text style={styles.modalName}>{selectedMember?.name.toUpperCase()}</Text>
+            <Text style={styles.modalName}>{(selectedMember?.name || 'Member').toUpperCase()}</Text>
             
             <View style={styles.methodGrid}>
               <Pressable style={[styles.methodBtn, method === 'cash' && styles.methodBtnActive]} onPress={() => setMethod('cash')}>

@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { subscribeAllPayments } from '../services/paymentService';
+import { subscribeAllPaymentsLedger } from '../services/paymentService';
 import { subscribeGroups } from '../services/groupService';
 import { colors, spacing, radius, normalize, layout } from '../utils/theme';
 
@@ -69,7 +69,7 @@ export default function TransactionsScreen() {
   const safeTop = insets.top || StatusBar.currentHeight || 30;
 
   useEffect(() => {
-    const unsubPayments = subscribeAllPayments((data) => {
+    const unsubPayments = subscribeAllPaymentsLedger((data) => {
       setPayments(data);
       setLoading(false);
       Animated.timing(fadeAnim, { 
