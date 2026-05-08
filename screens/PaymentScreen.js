@@ -204,6 +204,7 @@ export default function PaymentScreen({ route, navigation }) {
 
   return (
     <View style={styles.container}>
+      <View style={[styles.topBlocker, { height: safeTop }]} pointerEvents="none" />
       <StatusBar translucent={true} backgroundColor="transparent" barStyle="dark-content" />
       
       <View style={[styles.header, { paddingTop: safeTop + 20 }]}>
@@ -297,7 +298,6 @@ export default function PaymentScreen({ route, navigation }) {
         </KeyboardAvoidingView>
       </Modal>
 
-      <View style={[styles.topBlocker, { height: safeTop }]} pointerEvents="none" />
     </View>
   );
 }

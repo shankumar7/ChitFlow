@@ -128,6 +128,7 @@ export default function AuctionScreen({ route, navigation }) {
 
   return (
     <View style={styles.container}>
+      <View style={[styles.topBlocker, { height: safeTop }]} pointerEvents="none" />
       <StatusBar translucent={true} backgroundColor="transparent" barStyle="dark-content" />
 
       <ScrollView
@@ -272,7 +273,6 @@ export default function AuctionScreen({ route, navigation }) {
         </View>
       </Modal>
 
-      <View style={[styles.topBlocker, { height: safeTop }]} pointerEvents="none" />
     </View>
   );
 }
