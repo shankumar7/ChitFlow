@@ -20,7 +20,7 @@ export const subscribeAllMembers = (onUpdate) => {
   });
 };
 
-export const subscribeMembersByGroup = (groupId, onUpdate, onError) => {
+export const subscribeMembers = (groupId, onUpdate, onError) => {
   const q = query(membersRef, where('groupId', '==', groupId), orderBy('createdAt', 'asc'));
   return onSnapshot(
     q,

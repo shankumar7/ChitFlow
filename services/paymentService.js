@@ -16,22 +16,38 @@ const paymentsRef = collection(db, 'payments');
 
 const getPaymentId = ({ groupId, memberId, monthNumber }) => `${groupId}_${memberId}_${monthNumber}`;
 
-export const togglePaymentStatus = async ({ groupId, memberId, month, amount, status, method, remarks }) => {
+export const togglePaymentStatus = async ({ groupId, memberId, month, amount, status, method, remarks, memberName, groupName }) => {
   const docId = getPaymentId({ groupId, memberId, monthNumber: month });
+  const timestamp = new Date().toISOString(); // High-precision local time for Ledger
+  
   return await setDoc(
     doc(db, 'payments', docId),
     {
       groupId,
       memberId,
+      memberName, // Store names for ledger display without extra joins
+      groupName,
       monthNumber: month,
       amount,
       status,
       method: method || 'none',
       remarks: remarks || '',
-      updatedAt: serverTimestamp(),
+      timestamp, // ISO string for immediate display
+      updatedAt: serverTimestamp(), // Firestore sync time
     },
     { merge: true }
   );
+};
+
+export const subscribeAllPayments = (onUpdate) => {
+  const q = query(paymentsRef, where('status', '==', 'paid'));
+  return onSnapshot(q, (snapshot) => {
+    // Sort by timestamp descending
+    const data = snapshot.docs
+      .map(doc => ({ id: doc.id, ...doc.data() }))
+      .sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
+    onUpdate(data);
+  });
 };
 
 export const subscribePaymentsByGroupAndMonth = (groupId, monthNumber, onUpdate, onError) => {
@@ -59,10 +75,9 @@ export const subscribeAllPaymentsByMonth = (monthNumber, onUpdate) => {
 export const subscribeRecentTransactions = (onUpdate) => {
   const q = query(paymentsRef, where('status', '==', 'paid'));
   return onSnapshot(q, (snapshot) => {
-    // Sort manually as we might not have composite index for orderby + where yet
     const sorted = snapshot.docs
       .map(doc => ({ id: doc.id, ...doc.data() }))
-      .sort((a, b) => (b.updatedAt?.seconds || 0) - (a.updatedAt?.seconds || 0));
+      .sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
     onUpdate(sorted.slice(0, 50));
   });
 };
@@ -79,7 +94,7 @@ export const getDashboardStats = async (currentMonthNumber) => {
 
   const recentActivity = paymentsSnap.docs
     .map((item) => ({ id: item.id, ...item.data() }))
-    .sort((a, b) => (b.updatedAt?.seconds || 0) - (a.updatedAt?.seconds || 0))
+    .sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0))
     .slice(0, 5);
 
   const monthlyCollection = paymentsSnap.docs.reduce((sum, item) => {
