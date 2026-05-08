@@ -103,36 +103,38 @@ export default function MemberListScreen({ route, navigation }) {
 
   return (
     <View style={styles.container}>
+      <View style={[styles.topBlocker, { height: safeTop }]} pointerEvents="none" />
       <StatusBar translucent={true} backgroundColor="transparent" barStyle="dark-content" />
+
+      <View style={[styles.header, { paddingTop: safeTop + 20, paddingHorizontal: spacing.xl }]}>
+        <Pressable 
+          onPress={() => navigation.goBack()} 
+          style={styles.backBtn}
+          hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+        >
+          <MaterialCommunityIcons name="arrow-left" size={24} color={colors.text} />
+        </Pressable>
+        <Text style={styles.step}>MEMBER DIRECTORY</Text>
+        <View style={styles.brandTitleContainer}>
+          <Text style={styles.titleHeavy}>Circle</Text>
+          <Text style={styles.titleLight}>Members</Text>
+        </View>
+        <Text style={styles.groupContext}>{(groupName || 'GROUP').toUpperCase()}</Text>
+
+        <Pressable
+          style={styles.auctionBtn}
+          onPress={() => navigation.navigate('Auction', { groupId, groupName, monthlyAmount, duration, commissionPercentage })}
+        >
+          <MaterialCommunityIcons name="gavel" size={18} color={colors.white} />
+          <Text style={styles.auctionBtnText}>LIFT CHITTI</Text>
+        </Pressable>
+      </View>
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[styles.scrollContent, { paddingTop: safeTop + 20, paddingBottom: 120 }]}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: 20, paddingBottom: 120 }]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <Pressable 
-            onPress={() => navigation.goBack()} 
-            style={styles.backBtn}
-            hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
-          >
-            <MaterialCommunityIcons name="arrow-left" size={24} color={colors.text} />
-          </Pressable>
-          <Text style={styles.step}>MEMBER DIRECTORY</Text>
-          <View style={styles.brandTitleContainer}>
-            <Text style={styles.titleHeavy}>Circle</Text>
-            <Text style={styles.titleLight}>Members</Text>
-          </View>
-          <Text style={styles.groupContext}>{(groupName || 'GROUP').toUpperCase()}</Text>
-
-          <Pressable
-            style={styles.auctionBtn}
-            onPress={() => navigation.navigate('Auction', { groupId, groupName, monthlyAmount, duration, commissionPercentage })}
-          >
-            <MaterialCommunityIcons name="gavel" size={18} color={colors.white} />
-            <Text style={styles.auctionBtnText}>LIFT CHITTI</Text>
-          </Pressable>
-        </View>
 
         <View style={styles.actionRow}>
           <View style={styles.countBadge}>
@@ -173,7 +175,6 @@ export default function MemberListScreen({ route, navigation }) {
         <MaterialCommunityIcons name="account-plus" size={32} color={colors.white} />
       </Pressable>
 
-      <View style={[styles.topBlocker, { height: safeTop }]} pointerEvents="none" />
     </View>
   );
 }

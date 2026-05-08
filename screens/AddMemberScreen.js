@@ -77,28 +77,30 @@ export default function AddMemberScreen({ route, navigation }) {
 
   return (
     <View style={styles.container}>
+      <View style={[styles.topBlocker, { height: insets.top || 30 }]} pointerEvents="none" />
       <StatusBar barStyle="dark-content" />
       
+      <View style={[styles.header, { paddingTop: insets.top + 20, paddingHorizontal: spacing.xl }]}>
+        <Pressable 
+          onPress={() => navigation.goBack()} 
+          style={styles.backBtn}
+          hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+        >
+          <MaterialCommunityIcons name="arrow-left" size={24} color={colors.text} />
+        </Pressable>
+        <Text style={styles.step}>{isEditing ? 'EDIT PROFILE' : 'MEMBER INDUCTION'}</Text>
+        <View style={styles.brandTitleContainer}>
+          <Text style={styles.titleHeavy}>{isEditing ? 'Update' : 'Add'}</Text>
+          <Text style={styles.titleLight}>Member</Text>
+        </View>
+      </View>
+
       <ScrollView 
         style={styles.scrollView} 
-        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 40 }]}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: 20, paddingBottom: insets.bottom + 40 }]}
         showsVerticalScrollIndicator={false}
       >
         <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
-          <View style={styles.header}>
-            <Pressable 
-              onPress={() => navigation.goBack()} 
-              style={styles.backBtn}
-              hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
-            >
-              <MaterialCommunityIcons name="arrow-left" size={24} color={colors.text} />
-            </Pressable>
-            <Text style={styles.step}>{isEditing ? 'EDIT PROFILE' : 'MEMBER INDUCTION'}</Text>
-            <View style={styles.brandTitleContainer}>
-              <Text style={styles.titleHeavy}>{isEditing ? 'Update' : 'Add'}</Text>
-              <Text style={styles.titleLight}>Member</Text>
-            </View>
-          </View>
 
           <View style={styles.form}>
             <View style={styles.field}>
@@ -149,7 +151,6 @@ export default function AddMemberScreen({ route, navigation }) {
         </Animated.View>
       </ScrollView>
 
-      <View style={[styles.topBlocker, { height: insets.top || 30 }]} pointerEvents="none" />
     </View>
   );
 }

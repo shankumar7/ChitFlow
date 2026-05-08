@@ -131,26 +131,27 @@ export default function AuctionScreen({ route, navigation }) {
       <View style={[styles.topBlocker, { height: safeTop }]} pointerEvents="none" />
       <StatusBar translucent={true} backgroundColor="transparent" barStyle="dark-content" />
 
+      <View style={[styles.header, { paddingTop: safeTop + 20, paddingHorizontal: spacing.xl }]}>
+        <Pressable 
+          onPress={() => navigation.goBack()} 
+          style={styles.backBtn}
+          hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+        >
+          <MaterialCommunityIcons name="arrow-left" size={24} color={colors.text} />
+        </Pressable>
+        <Text style={styles.step}>AUCTION / BIDDING</Text>
+        <View style={styles.brandTitleContainer}>
+          <Text style={styles.titleHeavy}>Monthly</Text>
+          <Text style={styles.titleLight}>Lift</Text>
+        </View>
+        <Text style={styles.groupContext}>{(groupName || 'GROUP').toUpperCase()}</Text>
+      </View>
+
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[styles.scrollContent, { paddingTop: safeTop + 20, paddingBottom: 120 }]}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: 20, paddingBottom: 120 }]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <Pressable 
-            onPress={() => navigation.goBack()} 
-            style={styles.backBtn}
-            hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
-          >
-            <MaterialCommunityIcons name="arrow-left" size={24} color={colors.text} />
-          </Pressable>
-          <Text style={styles.step}>AUCTION / BIDDING</Text>
-          <View style={styles.brandTitleContainer}>
-            <Text style={styles.titleHeavy}>Monthly</Text>
-            <Text style={styles.titleLight}>Lift</Text>
-          </View>
-          <Text style={styles.groupContext}>{(groupName || 'GROUP').toUpperCase()}</Text>
-        </View>
 
         <View style={styles.monthPicker}>
           <Pressable onPress={() => changeMonth(-1)} style={styles.monthArrow}>

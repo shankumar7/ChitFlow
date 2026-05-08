@@ -77,6 +77,7 @@ export default function CreateGroupScreen({ navigation }) {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
       style={styles.container}
     >
+      <View style={[styles.topBlocker, { height: safeTop }]} pointerEvents="none" />
       <StatusBar translucent={true} backgroundColor="transparent" barStyle="dark-content" />
       
       <ScrollView 
@@ -207,7 +208,6 @@ export default function CreateGroupScreen({ navigation }) {
         </Animated.View>
       </ScrollView>
 
-      <View style={[styles.topBlocker, { height: safeTop }]} pointerEvents="none" />
     </KeyboardAvoidingView>
   );
 }
