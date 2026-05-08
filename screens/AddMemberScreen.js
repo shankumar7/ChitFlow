@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
   topBlocker: { position: 'absolute', top: 0, left: 0, right: 0, backgroundColor: colors.white, zIndex: 9999 },
   scrollView: { flex: 1 },
   scrollContent: { paddingHorizontal: spacing.xl, ...layout.container },
-  header: { marginBottom: spacing.xxl },
+  header: { marginBottom: spacing.xxl, zIndex: 10000 },
   backBtn: { marginBottom: spacing.md, marginLeft: -4 },
   step: { fontSize: normalize(10), fontWeight: '900', color: '#9CA3AF', letterSpacing: 2, marginBottom: 4 },
   brandTitleContainer: { flexDirection: 'row', alignItems: 'baseline', marginLeft: -2 },

@@ -305,7 +305,7 @@ export default function PaymentScreen({ route, navigation }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white },
   topBlocker: { position: 'absolute', top: 0, left: 0, right: 0, backgroundColor: colors.white, zIndex: 9999 },
-  header: { paddingHorizontal: spacing.xl, marginBottom: spacing.lg },
+  header: { paddingHorizontal: spacing.xl, marginBottom: spacing.lg, zIndex: 10000 },
   headerTop: { marginBottom: spacing.lg },
   headerContent: { marginTop: spacing.sm },
   backBtn: { marginBottom: spacing.md, marginLeft: -4 },
