@@ -255,7 +255,7 @@ export default function PaymentScreen({ route, navigation }) {
               <Text style={styles.summaryValue}>₹ {summary.totalCollected.toLocaleString()}</Text>
             </View>
             <View style={styles.summaryDivider} />
-            <View style={styles.summaryItem}>
+            <View style={styles.summaryItemRight}>
               <Text style={styles.summaryLabel}>PAID RATIO</Text>
               <Text style={styles.summaryValue}>{summary.paidCount}/{summary.totalMembers}</Text>
             </View>
@@ -273,7 +273,12 @@ export default function PaymentScreen({ route, navigation }) {
         }
       />
 
-      <Modal visible={showIntake} transparent={true} animationType="slide">
+      <Modal 
+        visible={showIntake} 
+        transparent={true} 
+        animationType="slide"
+        onRequestClose={() => setShowIntake(false)}
+      >
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHandle} />
@@ -324,11 +329,12 @@ const styles = StyleSheet.create({
   monthArrow: { padding: 8 },
   monthText: { fontSize: normalize(12), fontWeight: '900', color: colors.text, marginHorizontal: 24, letterSpacing: 1 },
   
-  summaryBox: { flexDirection: 'row', backgroundColor: colors.text, marginHorizontal: spacing.xl, padding: spacing.xl, borderRadius: radius.xs, marginBottom: spacing.xxl, ...layout.shadow },
-  summaryItem: { flex: 1 },
-  summaryDivider: { width: 1, height: '100%', backgroundColor: 'rgba(255,255,255,0.1)', marginHorizontal: spacing.xl },
-  summaryLabel: { fontSize: normalize(8), fontWeight: '900', color: '#9CA3AF', letterSpacing: 1, marginBottom: 8 },
-  summaryValue: { fontSize: normalize(20), fontWeight: '900', color: colors.white },
+  summaryBox: { flexDirection: 'row', backgroundColor: colors.text, padding: spacing.xl, borderRadius: radius.xs, marginBottom: spacing.xxl, marginHorizontal: spacing.xl, alignItems: 'center' },
+  summaryItem: { flex: 1.2 },
+  summaryDivider: { width: 1, height: 40, backgroundColor: 'rgba(255,255,255,0.1)', marginHorizontal: spacing.md },
+  summaryLabel: { fontSize: normalize(8), fontWeight: '900', color: '#9CA3AF', letterSpacing: 1, marginBottom: 4 },
+  summaryValue: { fontSize: normalize(22), fontWeight: '900', color: colors.white },
+  summaryItemRight: { flex: 0.8, alignItems: 'flex-end' },
   
   list: { paddingHorizontal: spacing.xl },
   card: { backgroundColor: '#FFFFFF', borderRadius: radius.xs, marginBottom: spacing.lg, borderWidth: 1, borderColor: '#F3F4F6' },
