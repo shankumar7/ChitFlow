@@ -2,7 +2,7 @@
   "expo": {
     "name": "ChitFlow",
     "slug": "chitflow",
-    "version": "1.0.2",
+    "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -20,13 +20,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": false,
-      "navigationBar": {
-        "backgroundColor": "#ffffff",
-        "buttonColor": "dark"
-      },
-      "package": "com.shankumar7.chitflow",
-      "versionCode": 1
+      "package": "com.shankumar7.chitflow"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -36,16 +30,12 @@
         "expo-build-properties",
         {
           "android": {
-            "targetSdkVersion": 35,
+            "minSdkVersion": 24,
+            "targetSdkVersion": 34,
             "compileSdkVersion": 35
           }
         }
       ]
-    ],
-    "extra": {
-      "eas": {
-        "projectId": "1df4367e-31db-4429-9e22-c2e650ce5790"
-      }
-    }
+    ]
   }
 }
