@@ -159,53 +159,60 @@ export default function PaymentScreen({ route, navigation }) {
       }) }] }]}>
         <View style={styles.cardContent}>
           <View style={styles.info}>
-            <View style={styles.nameRow}>
-              <Text style={styles.name}>{item.name.toUpperCase()}</Text>
-              {isLifted && <MaterialCommunityIcons name="trending-up" size={16} color="#EF4444" />}
-            </View>
+            <Text style={styles.name}>{item.name.toUpperCase()}</Text>
             
             <View style={styles.amountContainer}>
               <Text style={styles.amount}>₹ {calculatedAmount.toLocaleString()}</Text>
               {dividend > 0 && !isLifted && <Text style={styles.dividendTag}>- ₹{dividend.toLocaleString()} DIVIDEND</Text>}
-              {isLifted && <Text style={styles.interestTag}>+ ₹{(chitValue * 0.01).toLocaleString()} INTEREST</Text>}
+              {isLifted && <Text style={styles.interestTag}>+ INTEREST</Text>}
             </View>
 
-            {isPaid ? (
-              <Text style={styles.methodTag}>{(payment.method || 'CASH').toUpperCase()} {payment.remarks ? `• ${payment.remarks}` : ''}</Text>
-            ) : (
-              <Pressable onPress={() => handleCall(item.phone)} style={styles.callLink}>
-                <MaterialCommunityIcons name="phone" size={12} color="#3B82F6" />
-                <Text style={styles.callText}>FOLLOW UP NOW</Text>
-              </Pressable>
-            )}
+            <View style={styles.actionRow}>
+              {isPaid ? (
+                <View style={styles.methodBadge}>
+                  <MaterialCommunityIcons name="wallet-outline" size={12} color="#10B981" />
+                  <Text style={styles.methodText}>{(payment.method || 'CASH').toUpperCase()}</Text>
+                </View>
+              ) : (
+                <Pressable onPress={() => handleCall(item.phone)} style={styles.callLink}>
+                  <MaterialCommunityIcons name="phone" size={14} color="#3B82F6" />
+                  <Text style={styles.callText}>FOLLOW UP</Text>
+                </Pressable>
+              )}
+              {isLifted && (
+                <View style={styles.liftedBadge}>
+                  <MaterialCommunityIcons name="trending-up" size={12} color="#EF4444" />
+                  <Text style={styles.liftedText}>LIFTED</Text>
+                </View>
+              )}
+            </View>
           </View>
 
           <Pressable 
             style={({ pressed }) => [
-              styles.actionBtn, 
-              isPaid ? styles.actionBtnPaid : styles.actionBtnUnpaid,
-              pressed && { opacity: 0.7 }
+              styles.statusCircle, 
+              isPaid ? styles.statusCirclePaid : styles.statusCirclePending,
+              pressed && { scale: 0.95 }
             ]}
             onPress={() => openIntake(item)}
           >
             <MaterialCommunityIcons 
-              name={isPaid ? "check-circle" : "circle-outline"} 
-              size={20} 
-              color={isPaid ? colors.white : "#9CA3AF"} 
+              name={isPaid ? "check" : "circle-outline"} 
+              size={24} 
+              color={isPaid ? colors.white : "#D1D5DB"} 
             />
-            <Text style={[styles.actionText, { color: isPaid ? colors.white : "#9CA3AF" }]}>
-              {isPaid ? 'PAID' : 'PENDING'}
+            <Text style={[styles.statusSmallText, { color: isPaid ? colors.white : "#9CA3AF" }]}>
+              {isPaid ? 'PAID' : 'COLLECT'}
             </Text>
           </Pressable>
         </View>
       </Animated.View>
     );
+    );
   };
 
   return (
     <View style={styles.container}>
-      <View style={[styles.topBlocker, { height: safeTop }]} pointerEvents="none" />
-      <StatusBar translucent={true} backgroundColor="transparent" barStyle="dark-content" />
       
       <View style={[styles.header, { paddingTop: safeTop + 20 }]}>
         <View style={styles.headerTop}>
@@ -304,97 +311,73 @@ export default function PaymentScreen({ route, navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white },
-  topBlocker: { position: 'absolute', top: 0, left: 0, right: 0, backgroundColor: colors.white, zIndex: 9999 },
-  header: { paddingHorizontal: spacing.xl, marginBottom: spacing.lg, zIndex: 10000 },
+  header: { paddingHorizontal: spacing.xl, marginBottom: spacing.lg, zIndex: 10000, backgroundColor: colors.white },
   headerTop: { marginBottom: spacing.lg },
   headerContent: { marginTop: spacing.sm },
   backBtn: { marginBottom: spacing.md, marginLeft: -4 },
   step: { fontSize: normalize(10), fontWeight: '900', color: '#9CA3AF', letterSpacing: 2, marginBottom: 4 },
   brandTitleContainer: { flexDirection: 'row', alignItems: 'baseline', marginLeft: -2 },
-  titleHeavy: { fontSize: normalize(44), fontWeight: '900', color: colors.text, letterSpacing: -2 },
-  titleLight: { fontSize: normalize(44), fontWeight: '200', color: colors.text, letterSpacing: -1 },
-  monthPicker: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#F9FAFB', borderRadius: radius.xs, padding: spacing.xs, borderWidth: 1, borderColor: '#F3F4F6' },
-  monthArrow: { padding: 10 },
-  monthText: { fontSize: normalize(12), fontWeight: '900', color: colors.text, letterSpacing: 1 },
-  summaryBox: { flexDirection: 'row', backgroundColor: colors.text, borderRadius: radius.xs, padding: spacing.lg, marginBottom: spacing.xl, justifyContent: 'space-between', alignItems: 'center' },
-  summaryItem: { flex: 1, alignItems: 'center' },
-  summaryLabel: { fontSize: normalize(8), fontWeight: '900', color: '#9CA3AF', letterSpacing: 2, marginBottom: 4 },
-  summaryValue: { fontSize: normalize(20), fontWeight: '900', color: colors.white, letterSpacing: -0.5 },
-  summaryDivider: { width: 1, height: 24, backgroundColor: '#374151' },
-  list: { paddingHorizontal: spacing.xl },
-  card: { 
-    backgroundColor: '#fff', 
-    padding: spacing.lg, 
-    borderRadius: radius.xs, 
-    marginBottom: spacing.md, 
-    borderWidth: 1, 
-    borderColor: '#F3F4F6',
-    ...Platform.select({
-      web: { boxShadow: '0 2px 4px rgba(0,0,0,0.02)' },
-      default: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.02, shadowRadius: 4, elevation: 1 }
-    })
-  },
-  cardContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  info: { flex: 1, marginRight: spacing.md },
-  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
-  name: { fontSize: normalize(16), fontWeight: '900', color: colors.text, letterSpacing: 0.5 },
-  amountContainer: { flexDirection: 'row', alignItems: 'baseline', gap: 6, marginBottom: 8 },
-  amount: { fontSize: normalize(14), fontWeight: '800', color: '#6B7280' },
-  dividendTag: { fontSize: normalize(10), fontWeight: '800', color: '#10B981', letterSpacing: 0.5 },
-  interestTag: { fontSize: normalize(10), fontWeight: '800', color: '#EF4444', letterSpacing: 0.5 },
-  callLink: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    gap: 8, 
-    backgroundColor: '#F9FAFB', 
-    paddingHorizontal: 12, 
-    paddingVertical: 8, 
-    borderRadius: radius.full,
-    alignSelf: 'flex-start'
-  },
-  callText: { fontSize: normalize(10), fontWeight: '900', color: '#3B82F6', letterSpacing: 1 },
-  methodTag: { 
-    fontSize: normalize(9), 
-    fontWeight: '900', 
-    color: '#10B981', 
-    letterSpacing: 0.5,
-    backgroundColor: '#F0FDF4',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-    alignSelf: 'flex-start'
-  },
-  actionBtn: { 
-    paddingHorizontal: 20, 
-    paddingVertical: 16, 
-    borderRadius: radius.xs, 
-    alignItems: 'center', 
-    justifyContent: 'center',
-    minWidth: 110,
-    borderWidth: 1
-  },
-  actionBtnPaid: { backgroundColor: colors.text, borderColor: colors.text },
-  actionBtnUnpaid: { backgroundColor: '#fff', borderColor: '#E5E7EB' },
-  actionText: { fontSize: normalize(10), fontWeight: '900', letterSpacing: 1.5 },
+  titleHeavy: { fontSize: normalize(32), fontWeight: '900', color: colors.text, letterSpacing: -1 },
+  titleLight: { fontSize: normalize(32), fontWeight: '200', color: colors.text, letterSpacing: -0.5 },
+  amountText: { fontSize: normalize(14), fontWeight: '700', color: '#9CA3AF', marginTop: 4 },
   
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: colors.white, borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: spacing.xl, paddingBottom: Platform.OS === 'ios' ? spacing.xxl : spacing.xl },
-  modalHandle: { width: 40, height: 4, backgroundColor: '#E5E7EB', borderRadius: 2, alignSelf: 'center', marginBottom: spacing.xl },
-  modalTitle: { fontSize: normalize(11), fontWeight: '900', color: '#9CA3AF', letterSpacing: 2.5, marginBottom: 8, textAlign: 'center' },
-  modalName: { fontSize: normalize(32), fontWeight: '900', color: colors.text, letterSpacing: -1.5, marginBottom: spacing.xxl, textAlign: 'center' },
-  methodGrid: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.xl },
-  methodBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, paddingVertical: 20, borderRadius: radius.xs, borderWidth: 1, borderColor: '#F3F4F6', backgroundColor: '#F9FAFB' },
+  monthPicker: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F9FAFB', marginHorizontal: spacing.xl, paddingVertical: 12, borderRadius: radius.xs, marginBottom: spacing.xl },
+  monthArrow: { padding: 8 },
+  monthText: { fontSize: normalize(12), fontWeight: '900', color: colors.text, marginHorizontal: 24, letterSpacing: 1 },
+  
+  summaryBox: { flexDirection: 'row', backgroundColor: colors.text, marginHorizontal: spacing.xl, padding: spacing.xl, borderRadius: radius.xs, marginBottom: spacing.xxl, ...layout.shadow },
+  summaryItem: { flex: 1 },
+  summaryDivider: { width: 1, height: '100%', backgroundColor: 'rgba(255,255,255,0.1)', marginHorizontal: spacing.xl },
+  summaryLabel: { fontSize: normalize(8), fontWeight: '900', color: '#9CA3AF', letterSpacing: 1, marginBottom: 8 },
+  summaryValue: { fontSize: normalize(20), fontWeight: '900', color: colors.white },
+  
+  list: { paddingHorizontal: spacing.xl },
+  card: { backgroundColor: '#FFFFFF', borderRadius: radius.xs, marginBottom: spacing.lg, borderWidth: 1, borderColor: '#F3F4F6' },
+  cardContent: { flexDirection: 'row', padding: spacing.lg, alignItems: 'center' },
+  info: { flex: 1 },
+  name: { fontSize: normalize(15), fontWeight: '900', color: colors.text, marginBottom: 6 },
+  amountContainer: { flexDirection: 'row', alignItems: 'baseline', gap: 8, marginBottom: 12 },
+  amount: { fontSize: normalize(16), fontWeight: '900', color: colors.text },
+  dividendTag: { fontSize: normalize(9), fontWeight: '800', color: '#10B981' },
+  interestTag: { fontSize: normalize(9), fontWeight: '800', color: '#EF4444' },
+  
+  actionRow: { flexDirection: 'row', gap: 8 },
+  callLink: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#EFF6FF', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, gap: 4 },
+  callText: { fontSize: normalize(9), fontWeight: '900', color: '#3B82F6' },
+  methodBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F0FDF4', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, gap: 4 },
+  methodText: { fontSize: normalize(9), fontWeight: '900', color: '#10B981' },
+  liftedBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FEF2F2', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, gap: 4 },
+  liftedText: { fontSize: normalize(9), fontWeight: '900', color: '#EF4444' },
+  
+  statusCircle: { width: 64, height: 64, borderRadius: 32, justifyContent: 'center', alignItems: 'center', borderWidth: 1 },
+  statusCirclePending: { backgroundColor: '#FFFFFF', borderColor: '#F3F4F6' },
+  statusCirclePaid: { backgroundColor: colors.text, borderColor: colors.text },
+  statusSmallText: { fontSize: normalize(8), fontWeight: '900', marginTop: 2 },
+  
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: colors.white, borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: spacing.xl, minHeight: 400 },
+  modalHeader: { marginBottom: spacing.xl },
+  modalTitle: { fontSize: normalize(20), fontWeight: '900', color: colors.text },
+  modalSub: { fontSize: normalize(11), color: '#9CA3AF', marginTop: 4, fontWeight: '700' },
+  
+  intakeForm: { gap: spacing.lg },
+  intakeAmountBox: { backgroundColor: '#F9FAFB', padding: spacing.xl, borderRadius: radius.xs, alignItems: 'center' },
+  intakeLabel: { fontSize: normalize(10), fontWeight: '900', color: '#9CA3AF', marginBottom: 8 },
+  intakeValue: { fontSize: normalize(32), fontWeight: '900', color: colors.text },
+  
+  methodSelector: { flexDirection: 'row', gap: spacing.sm },
+  methodBtn: { flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: 8, borderWidth: 1, borderColor: '#F3F4F6' },
   methodBtnActive: { backgroundColor: colors.text, borderColor: colors.text },
-  methodText: { fontSize: normalize(12), fontWeight: '900', color: colors.text, letterSpacing: 1 },
-  methodTextActive: { color: colors.white },
-  remarksWrap: { marginBottom: spacing.xxl },
-  label: { fontSize: normalize(9), fontWeight: '900', color: '#9CA3AF', letterSpacing: 2, marginBottom: 8 },
-  remarksInput: { fontSize: normalize(18), fontWeight: '700', color: colors.text, borderBottomWidth: 2, borderBottomColor: '#F3F4F6', paddingVertical: 12 },
-  modalActions: { flexDirection: 'row', gap: spacing.md },
-  cancelBtn: { flex: 1, paddingVertical: 18, alignItems: 'center' },
-  cancelText: { fontSize: normalize(12), fontWeight: '900', color: '#9CA3AF', letterSpacing: 1.5 },
-  confirmBtn: { flex: 2, backgroundColor: '#10B981', paddingVertical: 18, borderRadius: radius.xs, alignItems: 'center' },
-  confirmText: { fontSize: normalize(12), fontWeight: '900', color: colors.white, letterSpacing: 1.5 },
+  methodBtnText: { fontSize: normalize(11), fontWeight: '900', color: '#9CA3AF' },
+  methodBtnTextActive: { color: colors.white },
+  
+  remarksInput: { backgroundColor: '#F9FAFB', padding: spacing.lg, borderRadius: 8, fontSize: normalize(12), color: colors.text, minHeight: 80, textAlignVertical: 'top' },
+  
+  modalFooter: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.xl },
+  cancelBtn: { flex: 1, paddingVertical: 16, alignItems: 'center', borderRadius: radius.xs, borderWidth: 1, borderColor: '#F3F4F6' },
+  confirmBtn: { flex: 2, paddingVertical: 16, alignItems: 'center', borderRadius: radius.xs, backgroundColor: colors.text },
+  btnText: { fontSize: normalize(14), fontWeight: '900', color: '#9CA3AF' },
+  confirmBtnText: { color: colors.white },
   emptyState: { alignItems: 'center', justifyContent: 'center', paddingVertical: 100, backgroundColor: '#F9FAFB', borderRadius: radius.xs, borderStyle: 'dashed', borderWidth: 2, borderColor: '#E5E7EB' },
   emptyText: { fontSize: normalize(18), fontWeight: '900', color: '#9CA3AF', marginTop: 16 },
   emptySub: { fontSize: normalize(12), color: '#D1D5DB', textAlign: 'center', marginTop: 8, paddingHorizontal: 40 }

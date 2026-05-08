@@ -65,7 +65,14 @@ const subscribeLiftingsByGroup = (groupId, onUpdate) => {
   });
 };
 
+const subscribeAllLiftings = (onUpdate) => {
+  return onSnapshot(liftingsRef, (snapshot) => {
+    onUpdate(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+  });
+};
+
 export {
   recordLifting,
-  subscribeLiftingsByGroup
+  subscribeLiftingsByGroup,
+  subscribeAllLiftings
 };

@@ -128,8 +128,6 @@ export default function AuctionScreen({ route, navigation }) {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.topBlocker, { height: safeTop }]} pointerEvents="none" />
-      <StatusBar translucent={true} backgroundColor="transparent" barStyle="dark-content" />
 
       <View style={[styles.header, { paddingTop: safeTop + 20, paddingHorizontal: spacing.xl }]}>
         <Pressable 
@@ -280,7 +278,6 @@ export default function AuctionScreen({ route, navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white },
-  topBlocker: { position: 'absolute', top: 0, left: 0, right: 0, backgroundColor: colors.white, zIndex: 9999 },
   header: { marginBottom: spacing.xl, zIndex: 10000 },
   backBtn: { marginBottom: spacing.md, marginLeft: -4 },
   step: { fontSize: normalize(10), fontWeight: '900', color: '#9CA3AF', letterSpacing: 2, marginBottom: 4 },

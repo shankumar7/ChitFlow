@@ -16,6 +16,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { subscribeGroups } from '../services/groupService';
 import { subscribeAllMembers } from '../services/memberService';
 import { subscribeAllPaymentsByMonth } from '../services/paymentService';
+import { subscribeAllLiftings } from '../services/liftingService';
 import { getCurrentMonthNumber } from '../utils/date';
 import { colors, spacing, radius, normalize, layout } from '../utils/theme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -54,35 +55,19 @@ export default function DashboardScreen({ navigation }) {
   const [groups, setGroups] = useState([]);
   const [members, setMembers] = useState([]);
   const [payments, setPayments] = useState([]);
+  const [liftings, setLiftings] = useState([]);
   const [loading, setLoading] = useState(true);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   const safeTop = insets.top || StatusBar.currentHeight || 30;
   const currentMonth = getCurrentMonthNumber();
 
-  // Exit Prevention - Safe for all platforms
-  useFocusEffect(
-    useCallback(() => {
-      if (Platform.OS === 'web') return;
-      
-      const onBackPress = () => true;
-      try {
-        BackHandler.addEventListener('hardwareBackPress', onBackPress);
-        return () => {
-          if (BackHandler?.removeEventListener) {
-            BackHandler.removeEventListener('hardwareBackPress', onBackPress);
-          }
-        };
-      } catch (e) {
-        console.warn("BackHandler error suppressed:", e);
-      }
-    }, [])
-  );
 
   useEffect(() => {
     const unsubGroups = subscribeGroups(setGroups);
     const unsubMembers = subscribeAllMembers(setMembers);
     const unsubPayments = subscribeAllPaymentsByMonth(currentMonth, setPayments);
+    const unsubLiftings = subscribeAllLiftings(setLiftings);
 
     setTimeout(() => {
       setLoading(false);
@@ -97,18 +82,21 @@ export default function DashboardScreen({ navigation }) {
       unsubGroups();
       unsubMembers();
       unsubPayments();
+      unsubLiftings();
     };
   }, []);
 
   const stats = {
     totalGroups: groups.length,
     totalMembers: members.length,
-    monthlyCollection: payments.reduce((sum, p) => sum + (p.amount || 0), 0)
+    monthlyCollection: payments.reduce((sum, p) => sum + (p.amount || 0), 0) + 
+                       liftings
+                        .filter(l => l.monthNumber === currentMonth)
+                        .reduce((sum, l) => sum + (l.organizerCommission || 0), 0)
   };
 
   return (
     <View style={styles.container}>
-      <StatusBar translucent={true} backgroundColor="transparent" barStyle="dark-content" />
       
       <ScrollView 
         style={styles.scrollView} 
@@ -166,14 +154,12 @@ export default function DashboardScreen({ navigation }) {
         </Animated.View>
       </ScrollView>
 
-      <View style={[styles.topBlocker, { height: safeTop }]} pointerEvents="none" />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white },
-  topBlocker: { position: 'absolute', top: 0, left: 0, right: 0, backgroundColor: colors.white, zIndex: 9999 },
   header: { marginBottom: spacing.xl },
   step: { fontSize: normalize(10), fontWeight: '900', color: '#9CA3AF', letterSpacing: 2, marginBottom: 4 },
   brandTitleContainer: { flexDirection: 'row', alignItems: 'baseline', marginLeft: -2 },

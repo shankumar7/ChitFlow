@@ -6,6 +6,8 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
+import * as NavigationBar from 'expo-navigation-bar';
 
 import WelcomeScreen from './screens/WelcomeScreen';
 import RegisterScreen from './screens/RegisterScreen';
@@ -86,6 +88,10 @@ export default function App() {
 
   useEffect(() => {
     checkLogin();
+    if (Platform.OS === 'android') {
+      NavigationBar.setBackgroundColorAsync('#FFFFFF');
+      NavigationBar.setButtonStyleAsync('dark');
+    }
   }, []);
 
   const checkLogin = async () => {
@@ -110,6 +116,8 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" translucent={false} />
+      <ExpoStatusBar style="dark" />
       <NavigationContainer>
         <Stack.Navigator 
           initialRouteName={initialRoute}

@@ -30,7 +30,6 @@ export default function WelcomeScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" />
       
       <Animated.View style={[
         styles.content, 

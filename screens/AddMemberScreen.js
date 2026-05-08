@@ -77,8 +77,6 @@ export default function AddMemberScreen({ route, navigation }) {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.topBlocker, { height: insets.top || 30 }]} pointerEvents="none" />
-      <StatusBar barStyle="dark-content" />
       
       <View style={[styles.header, { paddingTop: insets.top + 20, paddingHorizontal: spacing.xl }]}>
         <Pressable 
@@ -157,7 +155,6 @@ export default function AddMemberScreen({ route, navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white },
-  topBlocker: { position: 'absolute', top: 0, left: 0, right: 0, backgroundColor: colors.white, zIndex: 9999 },
   scrollView: { flex: 1 },
   scrollContent: { paddingHorizontal: spacing.xl, ...layout.container },
   header: { marginBottom: spacing.xxl, zIndex: 10000 },
