@@ -25,11 +25,22 @@
         "backgroundColor": "#ffffff",
         "buttonColor": "dark"
       },
-      "package": "com.shankumar7.chitflow"
+      "package": "com.shankumar7.chitflow",
+      "versionCode": 1
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "newArchEnabled": false
+          }
+        }
+      ]
+    ],
     "extra": {
       "eas": {
         "projectId": "1df4367e-31db-4429-9e22-c2e650ce5790"
