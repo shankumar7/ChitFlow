@@ -208,7 +208,6 @@ export default function PaymentScreen({ route, navigation }) {
         </View>
       </Animated.View>
     );
-    );
   };
 
   return (

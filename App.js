@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, ActivityIndicator, StyleSheet, Platform } from 'react-native';
+import { View, ActivityIndicator, StyleSheet, Platform, StatusBar } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -7,7 +7,6 @@ import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-cont
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
-import * as NavigationBar from 'expo-navigation-bar';
 
 import WelcomeScreen from './screens/WelcomeScreen';
 import RegisterScreen from './screens/RegisterScreen';
@@ -88,10 +87,6 @@ export default function App() {
 
   useEffect(() => {
     checkLogin();
-    if (Platform.OS === 'android') {
-      NavigationBar.setBackgroundColorAsync('#FFFFFF');
-      NavigationBar.setButtonStyleAsync('dark');
-    }
   }, []);
 
   const checkLogin = async () => {
