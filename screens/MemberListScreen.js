@@ -112,7 +112,7 @@ export default function MemberListScreen({ route, navigation }) {
         )}
       </ScrollView>
 
-      {/* FAB FOR NEW MEMBER - DOCKED ABOVE NAV BAR WITH ACCOUNT ICON */}
+      {/* FAB FOR NEW MEMBER - RECALIBRATED TO CLEAR NAV BAR */}
       <Pressable 
         style={({ pressed }) => [styles.fab, pressed && { transform: [{ scale: 0.95 }] }]}
         onPress={() => navigation.navigate('AddMember', { groupId })}
@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
   fab: { 
     position: 'absolute', 
     right: spacing.xl, 
-    bottom: 20, 
+    bottom: 90, // Calibrated to sit perfectly above navigation bar
     width: 64, 
     height: 64, 
     borderRadius: 32, 
