@@ -142,7 +142,7 @@ export default function GroupListScreen({ navigation }) {
         <MaterialCommunityIcons name="plus" size={32} color={colors.white} />
       </Pressable>
 
-      <View style={[styles.topBlocker, { height: safeTop }]} />
+      <View style={[styles.topBlocker, { height: safeTop }]} pointerEvents="none" />
     </View>
   );
 }
