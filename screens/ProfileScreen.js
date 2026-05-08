@@ -205,7 +205,7 @@ export default function ProfileScreen({ navigation }) {
         )}
       </ScrollView>
 
-      <View style={[styles.topBlocker, { height: safeTop }]} />
+      <View style={[styles.topBlocker, { height: safeTop }]} pointerEvents="none" />
     </View>
   );
 }

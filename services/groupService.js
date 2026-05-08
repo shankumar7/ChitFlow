@@ -13,7 +13,7 @@ import { db } from './firebase';
 
 const groupsRef = collection(db, 'home', 'chitflow', 'groups');
 
-export const subscribeGroups = (onUpdate, onError) => {
+const subscribeGroups = (onUpdate, onError) => {
   const q = query(groupsRef, orderBy('createdAt', 'desc'));
   return onSnapshot(
     q,
@@ -24,14 +24,21 @@ export const subscribeGroups = (onUpdate, onError) => {
   );
 };
 
-export const createGroup = async (payload) => {
+const createGroup = async (payload) => {
   return await addDoc(groupsRef, { ...payload, createdAt: serverTimestamp() });
 };
 
-export const updateGroup = async (groupId, payload) => {
+const updateGroup = async (groupId, payload) => {
   return await updateDoc(doc(db, 'home', 'chitflow', 'groups', groupId), payload);
 };
 
-export const deleteGroup = async (groupId) => {
+const deleteGroup = async (groupId) => {
   return await deleteDoc(doc(db, 'home', 'chitflow', 'groups', groupId));
+};
+
+export {
+  subscribeGroups,
+  createGroup,
+  updateGroup,
+  deleteGroup
 };

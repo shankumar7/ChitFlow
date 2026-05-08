@@ -23,7 +23,6 @@ const togglePaymentStatus = async ({ groupId, memberId, month, amount, status, m
   const timestamp = new Date().toISOString();
   const currentMonth = getCurrentMonthNumber();
 
-  // 1. Update Payment Doc
   await setDoc(
     doc(db, 'home', 'chitflow', 'payments', docId),
     {
@@ -42,8 +41,7 @@ const togglePaymentStatus = async ({ groupId, memberId, month, amount, status, m
     { merge: true }
   );
 
-  // 2. Update Member's Financials
-  const newTotalPaid = status === 'paid' ? (currentTotalPaid + amount) : (currentTotalPaid - amount);
+  const newTotalPaid = status === 'paid' ? (currentTotalPaid + Number(amount)) : (currentTotalPaid - Number(amount));
   const totalDueTillNow = currentMonth * monthlyAmount;
   const newPendingAmount = Math.max(0, totalDueTillNow - newTotalPaid);
 

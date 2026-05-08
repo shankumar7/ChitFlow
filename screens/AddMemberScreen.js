@@ -148,12 +148,15 @@ export default function AddMemberScreen({ route, navigation }) {
           </View>
         </Animated.View>
       </ScrollView>
+
+      <View style={[styles.topBlocker, { height: insets.top || 30 }]} pointerEvents="none" />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white },
+  topBlocker: { position: 'absolute', top: 0, left: 0, right: 0, backgroundColor: colors.white, zIndex: 9999 },
   scrollView: { flex: 1 },
   scrollContent: { paddingHorizontal: spacing.xl, ...layout.container },
   header: { marginBottom: spacing.xxl },

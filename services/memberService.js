@@ -71,11 +71,10 @@ const deleteMember = async (memberId) => {
   return await deleteDoc(doc(db, 'home', 'chitflow', 'members', memberId));
 };
 
-// Explicit export block to ensure Metro bundler synchronization
 export {
   subscribeAllMembers,
   subscribeMembers,
-  subscribeMembers as subscribeMembersByGroup, // Legacy alias for sync safety
+  subscribeMembers as subscribeMembersByGroup,
   createMember,
   createBatchMembers,
   updateMember,

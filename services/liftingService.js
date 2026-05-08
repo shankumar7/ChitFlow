@@ -13,14 +13,14 @@ import { updateMember } from './memberService';
 
 const liftingsRef = collection(db, 'home', 'chitflow', 'liftings');
 
-export const recordLifting = async ({
+const recordLifting = async ({
   groupId,
   memberId,
   monthNumber,
-  bidAmount, // This is the amount the member takes (e.g. 4,20,000)
-  chitValue, // Total chit value (e.g. 5,00,000)
+  bidAmount,
+  chitValue,
   totalMembers,
-  commissionPercentage = 5, // Default 5%
+  commissionPercentage = 5,
   memberName,
   groupName,
 }) => {
@@ -29,7 +29,6 @@ export const recordLifting = async ({
   const totalDividend = totalDiscount - organizerCommission;
   const dividendPerMember = totalDividend / totalMembers;
 
-  // 1. Record the lifting event
   const liftingDoc = await addDoc(liftingsRef, {
     groupId,
     memberId,
@@ -44,7 +43,6 @@ export const recordLifting = async ({
     timestamp: serverTimestamp(),
   });
 
-  // 2. Update the member's status
   await updateMember(memberId, {
     hasTakenChit: true,
     chitTakenMonth: monthNumber,
@@ -60,9 +58,14 @@ export const recordLifting = async ({
   };
 };
 
-export const subscribeLiftingsByGroup = (groupId, onUpdate) => {
+const subscribeLiftingsByGroup = (groupId, onUpdate) => {
   const q = query(liftingsRef, where('groupId', '==', groupId));
   return onSnapshot(q, (snapshot) => {
     onUpdate(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
   });
+};
+
+export {
+  recordLifting,
+  subscribeLiftingsByGroup
 };
