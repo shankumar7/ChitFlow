@@ -38,7 +38,7 @@ export default function ProfileScreen({ navigation }) {
       const storedPin = await AsyncStorage.getItem('user_pin');
 
       if (storedName) {
-        const userRef = doc(db, 'users', storedName.toLowerCase());
+        const userRef = doc(db, 'home', 'chitflow', 'users', storedName.toLowerCase());
         const userSnap = await getDoc(userRef);
 
         if (userSnap.exists()) {
@@ -119,7 +119,6 @@ export default function ProfileScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
-      <View style={styles.verticalSpine} />
       
       <ScrollView 
         style={styles.scrollView}
@@ -214,7 +213,6 @@ export default function ProfileScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white },
   topBlocker: { position: 'absolute', top: 0, left: 0, right: 0, backgroundColor: colors.white, zIndex: 9999 },
-  verticalSpine: { position: 'absolute', left: spacing.xl + normalize(4), top: 0, bottom: 0, width: 1, backgroundColor: '#F3F4F6' },
   scrollView: { flex: 1 },
   scrollContent: { paddingHorizontal: spacing.xl },
   header: { marginBottom: spacing.xxl },

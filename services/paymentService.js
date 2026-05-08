@@ -11,17 +11,21 @@ import {
   getCountFromServer,
 } from 'firebase/firestore';
 import { db } from './firebase';
+import { updateMember } from './memberService';
+import { getCurrentMonthNumber } from '../utils/date';
 
-const paymentsRef = collection(db, 'payments');
+const paymentsRef = collection(db, 'home', 'chitflow', 'payments');
 
 const getPaymentId = ({ groupId, memberId, monthNumber }) => `${groupId}_${memberId}_${monthNumber}`;
 
-const togglePaymentStatus = async ({ groupId, memberId, month, amount, status, method, remarks, memberName, groupName }) => {
+const togglePaymentStatus = async ({ groupId, memberId, month, amount, status, method, remarks, memberName, groupName, currentTotalPaid = 0, monthlyAmount = 0 }) => {
   const docId = getPaymentId({ groupId, memberId, monthNumber: month });
   const timestamp = new Date().toISOString();
-  
-  return await setDoc(
-    doc(db, 'payments', docId),
+  const currentMonth = getCurrentMonthNumber();
+
+  // 1. Update Payment Doc
+  await setDoc(
+    doc(db, 'home', 'chitflow', 'payments', docId),
     {
       groupId,
       memberId,
@@ -37,6 +41,18 @@ const togglePaymentStatus = async ({ groupId, memberId, month, amount, status, m
     },
     { merge: true }
   );
+
+  // 2. Update Member's Financials
+  const newTotalPaid = status === 'paid' ? (currentTotalPaid + amount) : (currentTotalPaid - amount);
+  const totalDueTillNow = currentMonth * monthlyAmount;
+  const newPendingAmount = Math.max(0, totalDueTillNow - newTotalPaid);
+
+  await updateMember(memberId, {
+    totalPaid: newTotalPaid,
+    pendingAmount: newPendingAmount
+  });
+
+  return true;
 };
 
 const subscribeAllPaymentsLedger = (onUpdate) => {
@@ -83,8 +99,8 @@ const subscribeRecentTransactions = (onUpdate) => {
 
 const getDashboardStats = async (currentMonthNumber) => {
   const [groupsSnap, membersSnap, paymentsSnap] = await Promise.all([
-    getCountFromServer(collection(db, 'groups')),
-    getCountFromServer(collection(db, 'members')),
+    getCountFromServer(collection(db, 'home', 'chitflow', 'groups')),
+    getCountFromServer(collection(db, 'home', 'chitflow', 'members')),
     getDocs(query(paymentsRef, where('monthNumber', '==', currentMonthNumber), where('status', '==', 'paid'))),
   ]);
 

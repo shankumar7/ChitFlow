@@ -92,7 +92,6 @@ export default function GroupListScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <StatusBar translucent={true} backgroundColor="transparent" barStyle="dark-content" />
-      <View style={styles.verticalSpine} />
       
       <ScrollView 
         style={styles.scrollView} 
@@ -116,7 +115,13 @@ export default function GroupListScreen({ navigation }) {
               group={group} 
               index={index}
               opacity={fadeAnim}
-              onPress={(g) => navigation.navigate('MemberList', { groupId: g.id, groupName: g.name, monthlyAmount: g.monthlyAmount })} 
+              onPress={(g) => navigation.navigate('MemberList', { 
+                groupId: g.id, 
+                groupName: g.name, 
+                monthlyAmount: g.monthlyAmount,
+                duration: g.duration,
+                commissionPercentage: g.commissionPercentage
+              })} 
             />
           ))
         ) : (
@@ -132,6 +137,7 @@ export default function GroupListScreen({ navigation }) {
       <Pressable 
         style={({ pressed }) => [styles.fab, pressed && { transform: [{ scale: 0.95 }] }]}
         onPress={() => navigation.navigate('CreateGroup')}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
         <MaterialCommunityIcons name="plus" size={32} color={colors.white} />
       </Pressable>
@@ -144,7 +150,6 @@ export default function GroupListScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white },
   topBlocker: { position: 'absolute', top: 0, left: 0, right: 0, backgroundColor: colors.white, zIndex: 9999 },
-  verticalSpine: { position: 'absolute', left: spacing.xl + normalize(4), top: 0, bottom: 0, width: 1, backgroundColor: '#F3F4F6' },
   header: { marginBottom: spacing.xl },
   step: { fontSize: normalize(10), fontWeight: '900', color: '#9CA3AF', letterSpacing: 2, marginBottom: 4 },
   brandTitleContainer: { flexDirection: 'row', alignItems: 'baseline', marginLeft: -2 },
@@ -171,7 +176,7 @@ const styles = StyleSheet.create({
   fab: { 
     position: 'absolute', 
     right: spacing.xl, 
-    bottom: 90, // Calibrated to sit perfectly above navigation bar
+    bottom: 24, // Positioned just above navigation bar
     width: 64, 
     height: 64, 
     borderRadius: 32, 

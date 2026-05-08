@@ -18,6 +18,7 @@ import CreateGroupScreen from './screens/CreateGroupScreen';
 import MemberListScreen from './screens/MemberListScreen';
 import AddMemberScreen from './screens/AddMemberScreen';
 import PaymentScreen from './screens/PaymentScreen';
+import AuctionScreen from './screens/AuctionScreen';
 import { colors, normalize } from './utils/theme';
 
 const Stack = createNativeStackNavigator();
@@ -121,6 +122,7 @@ export default function App() {
           <Stack.Screen name="MemberList" component={MemberListScreen} />
           <Stack.Screen name="AddMember" component={AddMemberScreen} />
           <Stack.Screen name="Payment" component={PaymentScreen} />
+          <Stack.Screen name="Auction" component={AuctionScreen} />
         </Stack.Navigator>
       </NavigationContainer>
     </SafeAreaProvider>

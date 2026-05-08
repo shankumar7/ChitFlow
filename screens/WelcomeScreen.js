@@ -31,7 +31,6 @@ export default function WelcomeScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
-      <View style={styles.verticalSpine} />
       
       <Animated.View style={[
         styles.content, 
@@ -74,7 +73,6 @@ export default function WelcomeScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white },
-  verticalSpine: { position: 'absolute', left: spacing.xl + normalize(4), top: 0, bottom: 0, width: 1, backgroundColor: '#F3F4F6' },
   content: { 
     flex: 1, 
     padding: spacing.xl, 

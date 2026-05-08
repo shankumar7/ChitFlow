@@ -14,13 +14,18 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { createMember } from '../services/memberService';
+import { createMember, updateMember } from '../services/memberService';
 import { colors, radius, spacing, normalize, layout, window } from '../utils/theme';
 
 export default function AddMemberScreen({ route, navigation }) {
   const insets = useSafeAreaInsets();
-  const { groupId } = route.params;
-  const [form, setForm] = useState({ name: '', phone: '' });
+  const { groupId, member } = route.params;
+  const isEditing = !!member;
+  
+  const [form, setForm] = useState({ 
+    name: member?.name || '', 
+    phone: member?.phone || '' 
+  });
   const [loading, setLoading] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
@@ -42,21 +47,29 @@ export default function AddMemberScreen({ route, navigation }) {
   }, []);
 
   const handleSubmit = async () => {
-    if (!form.name || !form.phone) {
-      Alert.alert('Incomplete Entry', 'Please provide both the participant name and contact number.');
+    if (!form.name) {
+      Alert.alert('Incomplete Entry', 'Please provide at least the participant name.');
       return;
     }
     setLoading(true);
     try {
-      await createMember({
-        groupId,
-        name: form.name,
-        phone: form.phone,
-      });
-      Alert.alert("Success", "New member added to the architecture.");
+      if (isEditing) {
+        await updateMember(member.id, {
+          name: form.name,
+          phone: form.phone,
+        });
+        Alert.alert("Synchronized", "Member profile updated successfully.");
+      } else {
+        await createMember({
+          groupId,
+          name: form.name,
+          phone: form.phone,
+        });
+        Alert.alert("Success", "New member added to the architecture.");
+      }
       navigation.goBack();
     } catch (e) {
-      Alert.alert('Error', 'Failed to synchronize new member. Please try again.');
+      Alert.alert('Error', 'Failed to synchronize member. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -65,7 +78,6 @@ export default function AddMemberScreen({ route, navigation }) {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
-      <View style={styles.verticalSpine} />
       
       <ScrollView 
         style={styles.scrollView} 
@@ -74,12 +86,16 @@ export default function AddMemberScreen({ route, navigation }) {
       >
         <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
           <View style={styles.header}>
-            <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <Pressable 
+              onPress={() => navigation.goBack()} 
+              style={styles.backBtn}
+              hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+            >
               <MaterialCommunityIcons name="arrow-left" size={24} color={colors.text} />
             </Pressable>
-            <Text style={styles.step}>MEMBER INDUCTION</Text>
+            <Text style={styles.step}>{isEditing ? 'EDIT PROFILE' : 'MEMBER INDUCTION'}</Text>
             <View style={styles.brandTitleContainer}>
-              <Text style={styles.titleHeavy}>Add</Text>
+              <Text style={styles.titleHeavy}>{isEditing ? 'Update' : 'Add'}</Text>
               <Text style={styles.titleLight}>Member</Text>
             </View>
           </View>
@@ -120,12 +136,14 @@ export default function AddMemberScreen({ route, navigation }) {
                   <ActivityIndicator color={colors.white} />
                 ) : (
                   <View style={styles.buttonContent}>
-                    <Text style={styles.buttonText}>CONFIRM MEMBER</Text>
-                    <MaterialCommunityIcons name="account-plus" size={20} color={colors.white} />
+                    <Text style={styles.buttonText}>{isEditing ? 'SAVE CHANGES' : 'CONFIRM MEMBER'}</Text>
+                    <MaterialCommunityIcons name={isEditing ? "account-check" : "account-plus"} size={20} color={colors.white} />
                   </View>
                 )}
               </Pressable>
-              <Text style={styles.note}>This participant will be added to the active group.</Text>
+              <Text style={styles.note}>
+                {isEditing ? 'Updates will be synchronized across the ledger.' : 'This participant will be added to the active group.'}
+              </Text>
             </View>
           </View>
         </Animated.View>
@@ -136,7 +154,6 @@ export default function AddMemberScreen({ route, navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white },
-  verticalSpine: { position: 'absolute', left: spacing.xl + normalize(4), top: 0, bottom: 0, width: 1, backgroundColor: '#F3F4F6' },
   scrollView: { flex: 1 },
   scrollContent: { paddingHorizontal: spacing.xl, ...layout.container },
   header: { marginBottom: spacing.xxl },

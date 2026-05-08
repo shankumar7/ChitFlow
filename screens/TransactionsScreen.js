@@ -98,7 +98,6 @@ export default function TransactionsScreen() {
   return (
     <View style={styles.container}>
       <StatusBar translucent={true} backgroundColor="transparent" barStyle="dark-content" />
-      <View style={styles.verticalSpine} />
       
       <View style={[styles.header, { paddingTop: safeTop + 20 }]}>
         <View style={styles.headerTitleRow}>
@@ -165,7 +164,6 @@ export default function TransactionsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white },
   topBlocker: { position: 'absolute', top: 0, left: 0, right: 0, backgroundColor: colors.white, zIndex: 9999 },
-  verticalSpine: { position: 'absolute', left: spacing.xl + normalize(4), top: 0, bottom: 0, width: 1, backgroundColor: '#F3F4F6' },
   header: { paddingHorizontal: spacing.xl, backgroundColor: colors.white, paddingBottom: spacing.md },
   headerTitleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.lg },
   step: { fontSize: normalize(10), fontWeight: '900', color: '#9CA3AF', letterSpacing: 2, marginBottom: 4 },

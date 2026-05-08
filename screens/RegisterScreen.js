@@ -47,7 +47,7 @@ export default function AuthScreen({ navigation }) {
 
     try {
       if (mode === 'LOGIN') {
-        const usersRef = collection(db, 'users');
+        const usersRef = collection(db, 'home', 'chitflow', 'users');
         const q = query(usersRef, where("pin", "==", pin.trim()));
         const querySnapshot = await getDocs(q);
 
@@ -64,7 +64,7 @@ export default function AuthScreen({ navigation }) {
         setSuccessUser(userData.name);
         setIsSuccess(true);
       } else {
-        const userRef = doc(db, 'users', (name || '').trim().toLowerCase());
+        const userRef = doc(db, 'home', 'chitflow', 'users', (name || '').trim().toLowerCase());
         const userSnap = await getDoc(userRef);
 
         if (userSnap.exists()) {
@@ -119,7 +119,6 @@ export default function AuthScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
-      <View style={styles.verticalSpine} />
       
       <Animated.View style={[
         styles.content, 
@@ -246,7 +245,6 @@ export default function AuthScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.white },
-  verticalSpine: { position: 'absolute', left: spacing.xl + normalize(4), top: 0, bottom: 0, width: 1, backgroundColor: '#F3F4F6' },
   content: { 
     flex: 1, 
     padding: spacing.xl, 
