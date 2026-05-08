@@ -156,7 +156,7 @@ export default function TransactionsScreen() {
         />
       )}
 
-      <View style={[styles.topBlocker, { height: safeTop }]} />
+      <View style={[styles.topBlocker, { height: safeTop }]} pointerEvents="none" />
     </View>
   );
 }

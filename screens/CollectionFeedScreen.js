@@ -136,7 +136,7 @@ export default function CollectionFeedScreen({ navigation }) {
         )}
       </ScrollView>
 
-      <View style={[styles.topBlocker, { height: safeTop }]} />
+      <View style={[styles.topBlocker, { height: safeTop }]} pointerEvents="none" />
     </View>
   );
 }
