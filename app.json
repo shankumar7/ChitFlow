@@ -24,7 +24,8 @@
       "navigationBar": {
         "backgroundColor": "#ffffff",
         "buttonColor": "dark"
-      }
+      },
+      "package": "com.shankumar7.chitflow"
     },
     "web": {
       "favicon": "./assets/favicon.png"
