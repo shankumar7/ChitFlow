@@ -47,25 +47,31 @@ export default function AddMemberScreen({ route, navigation }) {
   }, []);
 
   const handleSubmit = async () => {
-    if (!form.name) {
+    const name = form.name.trim();
+    const phone = form.phone.trim();
+    if (!name) {
       Alert.alert('Incomplete Entry', 'Please provide at least the participant name.');
+      return;
+    }
+    if (phone && !/^\+?[0-9\s-]{7,15}$/.test(phone)) {
+      Alert.alert('Invalid Contact', 'Enter a valid phone number or leave it blank.');
       return;
     }
     setLoading(true);
     try {
       if (isEditing) {
         await updateMember(member.id, {
-          name: form.name,
-          phone: form.phone,
+          name,
+          phone,
         });
         Alert.alert("Synchronized", "Member profile updated successfully.");
       } else {
         await createMember({
           groupId,
-          name: form.name,
-          phone: form.phone,
+          name,
+          phone,
         });
-        Alert.alert("Success", "New member added to the architecture.");
+        Alert.alert("Success", "New member added to the group.");
       }
       navigation.goBack();
     } catch (e) {

@@ -9,21 +9,26 @@ import {
   Alert, 
   ActivityIndicator, 
   ScrollView,
-  StatusBar
+  StatusBar,
+  Linking
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
-import * as Updates from 'expo-updates';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { checkForUpdate, skipVersion, UPDATE_STATUS } from '../services/updateService';
+import { APP_VERSION, RELEASES_URL } from '../utils/version';
+import { formatDate } from '../utils/date';
 import { colors, spacing, radius, normalize, window, layout } from '../utils/theme';
 
 export default function ProfileScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const [user, setUser] = useState({ name: '', pin: '', groupsCount: 0 });
   const [loading, setLoading] = useState(true);
-  const [updateStatus, setUpdateStatus] = useState('LATEST'); // LATEST, CHECKING, DOWNLOADING, READY
+  const [checking, setChecking] = useState(false);
+  const [updateResult, setUpdateResult] = useState(null);
+  const [showPin, setShowPin] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   const safeTop = insets.top || StatusBar.currentHeight || 30;
@@ -66,36 +71,24 @@ export default function ProfileScreen({ navigation }) {
   };
 
   const onCheckForUpdate = async () => {
-    setUpdateStatus('CHECKING');
-    if (Platform.OS === 'web') {
-      setTimeout(() => {
-        setUpdateStatus('LATEST');
-        Alert.alert("Web Version", "You are always on the latest version on the web.");
-      }, 1000);
-      return;
-    }
+    if (checking) return;
+    setChecking(true);
+    const result = await checkForUpdate();
+    setUpdateResult(result);
+    setChecking(false);
+  };
 
+  const openUrl = async (url) => {
     try {
-      const update = await Updates.checkForUpdateAsync();
-      if (update.isAvailable) {
-        setUpdateStatus('DOWNLOADING');
-        await Updates.fetchUpdateAsync();
-        setUpdateStatus('READY');
-        Alert.alert(
-          "Update Ready",
-          "New version downloaded. Install now?",
-          [{ text: "INSTALL", onPress: () => Updates.reloadAsync() }]
-        );
-      } else {
-        setUpdateStatus('LATEST');
-        Alert.alert("Up to Date", "You are using the latest version.");
-      }
+      await Linking.openURL(url);
     } catch (e) {
-      setTimeout(() => {
-        setUpdateStatus('LATEST');
-        Alert.alert("Diagnostic Success", "OTA Update bridge is active.");
-      }, 1500);
+      Alert.alert('Unable to open link', url);
     }
+  };
+
+  const onSkipVersion = async () => {
+    if (updateResult?.latestVersion) await skipVersion(updateResult.latestVersion);
+    setUpdateResult({ ...updateResult, status: UPDATE_STATUS.UP_TO_DATE, skipped: true });
   };
 
   const handleLogout = async () => {
@@ -124,9 +117,6 @@ export default function ProfileScreen({ navigation }) {
         showsVerticalScrollIndicator={false}
       >
         <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
-          <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <MaterialCommunityIcons name="arrow-left" size={24} color={colors.text} />
-          </Pressable>
           <Text style={styles.step}>ACCOUNT</Text>
           <View style={styles.brandTitleContainer}>
             <Text style={styles.titleHeavy}>Chit</Text>
@@ -149,8 +139,13 @@ export default function ProfileScreen({ navigation }) {
 
             <View style={styles.detailsGrid}>
               <View style={styles.detailCard}>
-                <Text style={styles.detailLabel}>SECURITY PIN</Text>
-                <Text style={styles.detailValue}>{user.pin}</Text>
+                <View style={styles.pinHeader}>
+                  <Text style={styles.detailLabel}>SECURITY PIN</Text>
+                  <Pressable onPress={() => setShowPin(v => !v)} hitSlop={10} accessibilityLabel={showPin ? 'Hide PIN' : 'Show PIN'}>
+                    <MaterialCommunityIcons name={showPin ? 'eye-off-outline' : 'eye-outline'} size={16} color={colors.textLight} />
+                  </Pressable>
+                </View>
+                <Text style={styles.detailValue}>{showPin ? user.pin : '••••'}</Text>
               </View>
               <View style={styles.detailCard}>
                 <Text style={styles.detailLabel}>GROUPS</Text>
@@ -159,34 +154,73 @@ export default function ProfileScreen({ navigation }) {
             </View>
 
             <View style={styles.diagnosticHub}>
-              <Text style={styles.label}>VERSION DIAGNOSTICS</Text>
-              <View style={[styles.diagCard, updateStatus === 'READY' && styles.diagCardReady]}>
-                <View style={styles.diagStatusLine} />
+              <Text style={styles.label}>APP VERSION</Text>
+              <View style={[styles.diagCard, updateResult?.status === UPDATE_STATUS.AVAILABLE && styles.diagCardReady]}>
+                <View style={[styles.diagStatusLine, updateResult?.status === UPDATE_STATUS.AVAILABLE && { backgroundColor: '#3B82F6' }, updateResult?.status === UPDATE_STATUS.ERROR && { backgroundColor: '#EF4444' }]} />
                 <View style={styles.diagInfo}>
                   <View style={styles.diagRow}>
-                    <Text style={styles.diagBuild}>v1.0.2</Text>
-                    <View style={[styles.diagTag, updateStatus === 'READY' && styles.diagTagReady]}>
-                      <Text style={styles.diagTagText}>{updateStatus}</Text>
+                    <Text style={styles.diagBuild}>v{APP_VERSION}</Text>
+                    <View style={[styles.diagTag, updateResult?.status === UPDATE_STATUS.AVAILABLE && styles.diagTagReady]}>
+                      <Text style={[styles.diagTagText, updateResult?.status === UPDATE_STATUS.AVAILABLE && { color: colors.white }]}>
+                        {checking ? 'CHECKING' : updateResult?.status === UPDATE_STATUS.AVAILABLE ? 'UPDATE' : 'INSTALLED'}
+                      </Text>
                     </View>
                   </View>
-                  <Text style={styles.diagSub}>STABLE PRODUCTION BUILD</Text>
+                  <Text style={styles.diagSub}>
+                    {updateResult?.status === UPDATE_STATUS.AVAILABLE
+                      ? `v${updateResult.latestVersion} IS AVAILABLE`
+                      : updateResult?.status === UPDATE_STATUS.UP_TO_DATE
+                        ? (updateResult.skipped ? 'REMINDER DISMISSED' : 'YOU ARE UP TO DATE')
+                        : updateResult?.status === UPDATE_STATUS.NO_RELEASES
+                          ? 'NO PUBLISHED RELEASES YET'
+                          : updateResult?.status === UPDATE_STATUS.ERROR
+                            ? 'COULD NOT CHECK FOR UPDATES'
+                            : 'TAP CHECK TO LOOK FOR UPDATES'}
+                  </Text>
                 </View>
                 <Pressable
-                  style={({ pressed }) => [
-                    styles.diagBtn,
-                    pressed && styles.diagBtnPressed,
-                    (updateStatus === 'CHECKING' || updateStatus === 'DOWNLOADING') && styles.diagBtnDisabled
-                  ]}
-                  onPress={updateStatus === 'READY' ? () => Updates.reloadAsync() : onCheckForUpdate}
-                  disabled={updateStatus === 'CHECKING' || updateStatus === 'DOWNLOADING'}
+                  style={({ pressed }) => [styles.diagBtn, pressed && styles.diagBtnPressed, checking && styles.diagBtnDisabled]}
+                  onPress={onCheckForUpdate}
+                  disabled={checking}
+                  accessibilityRole="button"
+                  accessibilityLabel="Check for updates"
                 >
-                  {updateStatus === 'CHECKING' || updateStatus === 'DOWNLOADING' ? (
+                  {checking ? (
                     <ActivityIndicator size="small" color={colors.white} />
                   ) : (
-                    <Text style={styles.diagBtnText}>{updateStatus === 'READY' ? 'INSTALL' : 'CHECK'}</Text>
+                    <Text style={styles.diagBtnText}>CHECK</Text>
                   )}
                 </Pressable>
               </View>
+
+              {updateResult?.status === UPDATE_STATUS.AVAILABLE && (
+                <View style={styles.updatePanel}>
+                  <Text style={styles.updateTitle}>{(updateResult.releaseName || `v${updateResult.latestVersion}`).toUpperCase()}</Text>
+                  {!!updateResult.publishedAt && (
+                    <Text style={styles.updateDate}>RELEASED {formatDate(updateResult.publishedAt).toUpperCase()}</Text>
+                  )}
+                  {!!updateResult.notes && (
+                    <Text style={styles.updateNotes} numberOfLines={8}>{updateResult.notes}</Text>
+                  )}
+                  <View style={styles.updateActions}>
+                    <Pressable style={styles.updateSecondary} onPress={onSkipVersion}>
+                      <Text style={styles.updateSecondaryText}>SKIP THIS VERSION</Text>
+                    </Pressable>
+                    <Pressable style={styles.updatePrimary} onPress={() => openUrl(updateResult.downloadUrl)}>
+                      <Text style={styles.updatePrimaryText}>DOWNLOAD</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              )}
+
+              {updateResult?.status === UPDATE_STATUS.ERROR && (
+                <Text style={styles.updateError}>{updateResult.message}</Text>
+              )}
+
+              <Pressable onPress={() => openUrl(RELEASES_URL)} style={styles.releasesLink}>
+                <MaterialCommunityIcons name="github" size={16} color={colors.textMuted} />
+                <Text style={styles.releasesLinkText}>VIEW ALL RELEASES</Text>
+              </Pressable>
             </View>
 
             <View style={styles.logoutWrap}>
@@ -256,12 +290,25 @@ const styles = StyleSheet.create({
   diagBuild: { fontSize: normalize(20), fontWeight: '900', color: colors.text, letterSpacing: -0.5 },
   diagTag: { backgroundColor: '#F3F4F6', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
   diagTagReady: { backgroundColor: '#3B82F6' },
-  diagTagText: { fontSize: normalize(8), fontWeight: '900', color: colors.text, letterSpacing: 0.5 },
+  diagTagText: { fontSize: normalize(9), fontWeight: '900', color: colors.text, letterSpacing: 0.5 },
   diagSub: { fontSize: normalize(8), fontWeight: '700', color: '#9CA3AF', letterSpacing: 1, marginTop: 2 },
   diagBtn: { backgroundColor: colors.text, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 4 },
   diagBtnPressed: { opacity: 0.8, transform: [{ scale: 0.95 }] },
   diagBtnDisabled: { opacity: 0.5 },
   diagBtnText: { color: colors.white, fontSize: normalize(12), fontWeight: '900', letterSpacing: 2 },
+  pinHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  updatePanel: { marginTop: spacing.md, backgroundColor: '#EFF6FF', borderRadius: radius.sm, padding: spacing.md, borderWidth: 1, borderColor: '#BFDBFE' },
+  updateTitle: { fontSize: normalize(13), fontWeight: '900', color: colors.text, letterSpacing: 1 },
+  updateDate: { fontSize: normalize(9), fontWeight: '800', color: '#3B82F6', letterSpacing: 1, marginTop: 4 },
+  updateNotes: { fontSize: normalize(12), color: colors.textMuted, lineHeight: normalize(18), marginTop: spacing.sm },
+  updateActions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
+  updateSecondary: { flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: radius.xs, borderWidth: 1, borderColor: '#BFDBFE' },
+  updateSecondaryText: { fontSize: normalize(10), fontWeight: '900', color: colors.textMuted, letterSpacing: 1 },
+  updatePrimary: { flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: radius.xs, backgroundColor: '#3B82F6' },
+  updatePrimaryText: { fontSize: normalize(10), fontWeight: '900', color: colors.white, letterSpacing: 1 },
+  updateError: { fontSize: normalize(11), color: '#EF4444', fontWeight: '700', marginTop: spacing.sm },
+  releasesLink: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: spacing.md, paddingVertical: 8 },
+  releasesLinkText: { fontSize: normalize(10), fontWeight: '800', color: colors.textMuted, letterSpacing: 1 },
   logoutWrap: { marginTop: spacing.xl },
   logoutButton: { backgroundColor: '#EF4444', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, paddingVertical: normalize(18), borderRadius: radius.xs },
   logoutButtonPressed: { opacity: 0.8 },

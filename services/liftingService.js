@@ -1,15 +1,13 @@
 import {
   collection,
   doc,
-  addDoc,
-  updateDoc,
+  writeBatch,
   serverTimestamp,
   query,
   where,
   onSnapshot,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { updateMember } from './memberService';
 
 const liftingsRef = collection(db, 'home', 'chitflow', 'liftings');
 
@@ -29,7 +27,10 @@ const recordLifting = async ({
   const totalDividend = totalDiscount - organizerCommission;
   const dividendPerMember = totalDividend / totalMembers;
 
-  const liftingDoc = await addDoc(liftingsRef, {
+  // The lifting record and the member flag are committed atomically.
+  const liftingRef = doc(liftingsRef);
+  const batch = writeBatch(db);
+  batch.set(liftingRef, {
     groupId,
     memberId,
     memberName,
@@ -42,15 +43,15 @@ const recordLifting = async ({
     dividendPerMember,
     timestamp: serverTimestamp(),
   });
-
-  await updateMember(memberId, {
+  batch.update(doc(db, 'home', 'chitflow', 'members', memberId), {
     hasTakenChit: true,
     chitTakenMonth: monthNumber,
     chitTakenAmount: bidAmount,
   });
+  await batch.commit();
 
   return {
-    id: liftingDoc.id,
+    id: liftingRef.id,
     totalDiscount,
     organizerCommission,
     totalDividend,

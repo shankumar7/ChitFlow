@@ -75,18 +75,17 @@ export default function CollectionFeedScreen({ navigation }) {
   const currentMonth = getCurrentMonthNumber();
 
   useEffect(() => {
-    const unsubGroups = subscribeGroups(setGroups);
-    const unsubMembers = subscribeAllMembers(setMembers);
-    const unsubPayments = subscribeAllPaymentsByMonth(currentMonth, setPayments);
-
-    setTimeout(() => {
+    const unsubGroups = subscribeGroups((data) => {
+      setGroups(data);
       setLoading(false);
-      Animated.timing(fadeAnim, { 
-        toValue: 1, 
-        duration: 800, 
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
         useNativeDriver: Platform.OS !== 'web'
       }).start();
-    }, 1200);
+    });
+    const unsubMembers = subscribeAllMembers(setMembers);
+    const unsubPayments = subscribeAllPaymentsByMonth(currentMonth, setPayments);
 
     return () => {
       unsubGroups();
@@ -123,7 +122,13 @@ export default function CollectionFeedScreen({ navigation }) {
               payments={payments}
               index={index}
               opacity={fadeAnim}
-              onPress={(g) => navigation.navigate('Payment', { groupId: g.id, groupName: g.name, monthlyAmount: g.monthlyAmount })} 
+              onPress={(g) => navigation.navigate('Payment', {
+                groupId: g.id,
+                groupName: g.name,
+                monthlyAmount: g.monthlyAmount,
+                duration: g.duration,
+                commissionPercentage: g.commissionPercentage
+              })} 
             />
           ))
         ) : (

@@ -40,6 +40,7 @@ export default function AuthScreen({ navigation }) {
   }, [mode, isSuccess]);
 
   const handleAuth = async () => {
+    if (loading) return;
     if (mode === 'REGISTER' && !name.trim()) return;
     if (mode === 'LOGIN' && !pin.trim()) return;
     
@@ -75,10 +76,30 @@ export default function AuthScreen({ navigation }) {
 
         let finalPin = pin.trim();
         const wasRandom = !finalPin;
-        if (wasRandom) {
-          finalPin = Math.floor(1000 + Math.random() * 9000).toString();
-        } else if (finalPin.length !== 4) {
+        if (!wasRandom && !/^\d{4}$/.test(finalPin)) {
           Alert.alert("Invalid PIN", "Please provide a 4-digit PIN or leave it blank.");
+          setLoading(false);
+          return;
+        }
+
+        // Login is PIN based, so a PIN must never be shared by two accounts.
+        const isPinTaken = async (candidate) => {
+          const taken = await getDocs(query(collection(db, 'home', 'chitflow', 'users'), where('pin', '==', candidate)));
+          return !taken.empty;
+        };
+        if (wasRandom) {
+          let attempts = 0;
+          do {
+            finalPin = Math.floor(1000 + Math.random() * 9000).toString();
+            attempts += 1;
+          } while (attempts < 20 && (await isPinTaken(finalPin)));
+          if (await isPinTaken(finalPin)) {
+            Alert.alert("Try again", "Could not generate a free PIN. Please try again.");
+            setLoading(false);
+            return;
+          }
+        } else if (await isPinTaken(finalPin)) {
+          Alert.alert("PIN Unavailable", "That PIN is already in use. Please choose another or leave it blank for a random one.");
           setLoading(false);
           return;
         }
@@ -210,10 +231,10 @@ export default function AuthScreen({ navigation }) {
                   placeholder="0000"
                   placeholderTextColor="#D1D5DB"
                   value={pin}
-                  onChangeText={setPin}
-                  keyboardType="numeric"
+                  onChangeText={(v) => setPin(v.replace(/[^0-9]/g, ''))}
+                  keyboardType="number-pad"
                   maxLength={4}
-                  secureTextEntry={false}
+                  secureTextEntry={mode === 'LOGIN'}
                   autoFocus={mode === 'LOGIN'}
                 />
                 <View style={styles.underline} />

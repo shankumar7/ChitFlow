@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   StyleSheet, 
   Text, 
@@ -8,11 +8,9 @@ import {
   Animated, 
   Platform, 
   StatusBar,
-  BackHandler,
   ActivityIndicator
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
 import { subscribeGroups } from '../services/groupService';
 import { subscribeAllMembers } from '../services/memberService';
 import { subscribeAllPaymentsByMonth } from '../services/paymentService';
@@ -64,21 +62,27 @@ export default function DashboardScreen({ navigation }) {
 
 
   useEffect(() => {
-    const unsubGroups = subscribeGroups(setGroups);
+    const unsubGroups = subscribeGroups((data) => {
+      setGroups(data);
+      setLoading(false);
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: Platform.OS !== 'web'
+      }).start();
+    });
     const unsubMembers = subscribeAllMembers(setMembers);
     const unsubPayments = subscribeAllPaymentsByMonth(currentMonth, setPayments);
     const unsubLiftings = subscribeAllLiftings(setLiftings);
 
-    setTimeout(() => {
+    // Safety net so the screen still appears if the first snapshot never arrives (for example offline).
+    const fallback = setTimeout(() => {
       setLoading(false);
-      Animated.timing(fadeAnim, { 
-        toValue: 1, 
-        duration: 800, 
-        useNativeDriver: Platform.OS !== 'web' 
-      }).start();
-    }, 1200);
+      Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: Platform.OS !== 'web' }).start();
+    }, 4000);
 
     return () => {
+      clearTimeout(fallback);
       unsubGroups();
       unsubMembers();
       unsubPayments();

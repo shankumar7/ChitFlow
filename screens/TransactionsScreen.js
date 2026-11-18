@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { subscribeAllPaymentsLedger } from '../services/paymentService';
 import { subscribeGroups } from '../services/groupService';
+import { formatDate } from '../utils/date';
 import { colors, spacing, radius, normalize, layout } from '../utils/theme';
 
 const formatTime = (isoString) => {
@@ -36,8 +37,8 @@ const TransactionItem = ({ item, index, opacity }) => (
       <View style={styles.txValue}>
         <Text style={styles.txAmount}>₹ {(item.amount || 0).toLocaleString()}</Text>
         <View style={styles.txMeta}>
-          <View style={[styles.methodBadge, { backgroundColor: item.method === 'UPI' ? '#EFF6FF' : '#F0FDF4' }]}>
-            <Text style={[styles.methodText, { color: item.method === 'UPI' ? '#3B82F6' : '#10B981' }]}>
+          <View style={[styles.methodBadge, { backgroundColor: String(item.method).toUpperCase() === 'UPI' ? '#EFF6FF' : '#F0FDF4' }]}>
+            <Text style={[styles.methodText, { color: String(item.method).toUpperCase() === 'UPI' ? '#3B82F6' : '#10B981' }]}>
               {(item.method || 'CASH').toUpperCase()}
             </Text>
           </View>
@@ -52,7 +53,7 @@ const TransactionItem = ({ item, index, opacity }) => (
       </View>
     ) : null}
     <View style={styles.txFooter}>
-      <Text style={styles.txDate}>{item.date || '---'}</Text>
+      <Text style={styles.txDate}>{formatDate(item.timestamp) || '---'}</Text>
     </View>
   </Animated.View>
 );

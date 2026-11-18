@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, ActivityIndicator, StyleSheet, Platform, StatusBar } from 'react-native';
+import { View, ActivityIndicator, StyleSheet, Platform, Alert, Linking } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -20,6 +20,7 @@ import MemberListScreen from './screens/MemberListScreen';
 import AddMemberScreen from './screens/AddMemberScreen';
 import PaymentScreen from './screens/PaymentScreen';
 import AuctionScreen from './screens/AuctionScreen';
+import { checkForUpdateOnLaunch, skipVersion } from './services/updateService';
 import { colors, normalize } from './utils/theme';
 
 const Stack = createNativeStackNavigator();
@@ -27,7 +28,26 @@ const Tab = createBottomTabNavigator();
 
 function MainTabs() {
   const insets = useSafeAreaInsets();
-  
+
+  // Once a day, quietly look for a newer GitHub release and offer it to the user.
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    let cancelled = false;
+    checkForUpdateOnLaunch().then((update) => {
+      if (cancelled || !update) return;
+      Alert.alert(
+        'Update available',
+        `ChitFlow v${update.latestVersion} is available. You are on v${update.currentVersion}.`,
+        [
+          { text: 'Skip this version', style: 'cancel', onPress: () => skipVersion(update.latestVersion) },
+          { text: 'Later' },
+          { text: 'Download', onPress: () => Linking.openURL(update.downloadUrl).catch(() => {}) },
+        ]
+      );
+    });
+    return () => { cancelled = true; };
+  }, []);
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -64,8 +84,8 @@ function MainTabs() {
           })
         },
         tabBarLabelStyle: {
-          fontSize: normalize(8),
-          fontWeight: '900',
+          fontSize: normalize(10),
+          fontWeight: '800',
           letterSpacing: 0.5,
           marginBottom: 4,
           textTransform: 'uppercase'
@@ -111,7 +131,6 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" translucent={false} />
       <ExpoStatusBar style="dark" />
       <NavigationContainer>
         <Stack.Navigator 

@@ -12,7 +12,8 @@ import {
   TextInput,
   Modal,
   KeyboardAvoidingView,
-  Linking
+  Linking,
+  Alert
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -37,8 +38,10 @@ export default function PaymentScreen({ route, navigation }) {
   const [selectedMember, setSelectedMember] = useState(null);
   const [method, setMethod] = useState('cash'); // cash, upi
   const [remarks, setRemarks] = useState('');
+  const [saving, setSaving] = useState(false);
 
-  const chitValue = useMemo(() => (parseFloat(monthlyAmount) * parseInt(duration)) || 0, [monthlyAmount, duration]);
+  const monthlyAmt = parseFloat(monthlyAmount) || 0;
+  const chitValue = useMemo(() => monthlyAmt * (parseInt(duration) || 0), [monthlyAmt, duration]);
   const safeTop = insets.top || StatusBar.currentHeight || 30;
 
   useEffect(() => {
@@ -78,9 +81,9 @@ export default function PaymentScreen({ route, navigation }) {
   const calculateMemberAmount = (member) => {
     const interest = chitValue * 0.01;
     if (member.hasTakenChit && member.chitTakenMonth < currentMonth) {
-      return monthlyAmount + interest;
+      return monthlyAmt + interest;
     }
-    return Math.max(0, monthlyAmount - dividend);
+    return Math.max(0, monthlyAmt - dividend);
   };
 
   const summary = useMemo(() => {
@@ -113,7 +116,14 @@ export default function PaymentScreen({ route, navigation }) {
   const openIntake = (member) => {
     const existing = payments.find(p => p.memberId === member.id);
     if (existing?.status === 'paid') {
-      handleConfirm(member.id, 'unpaid', member.name);
+      Alert.alert(
+        'Undo payment?',
+        `Mark ${member.name}'s payment as pending again?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Undo', style: 'destructive', onPress: () => handleConfirm(member.id, 'unpaid', member.name) },
+        ]
+      );
     } else {
       setSelectedMember(member);
       setMethod('cash');
@@ -126,24 +136,35 @@ export default function PaymentScreen({ route, navigation }) {
     const targetMemberId = memberId || selectedMember.id;
     const finalMemberName = mName || selectedMember?.name || 'Member';
     const memberObj = members.find(m => m.id === targetMemberId);
-    
-    const finalAmount = calculateMemberAmount(memberObj);
+    if (!memberObj || saving) return;
 
-    await togglePaymentStatus({
-      groupId,
-      groupName,
-      memberId: targetMemberId,
-      memberName: finalMemberName,
-      month: currentMonth,
-      amount: finalAmount,
-      status,
-      method: status === 'paid' ? method : 'none',
-      remarks: status === 'paid' ? remarks : '',
-      currentTotalPaid: memberObj?.totalPaid || 0,
-      monthlyAmount: monthlyAmount
-    });
-    setShowIntake(false);
-    setSelectedMember(null);
+    // When undoing, reverse exactly what was recorded instead of recalculating it,
+    // because the dividend or interest may have changed since the payment was taken.
+    const existing = payments.find(p => p.memberId === targetMemberId);
+    const finalAmount = status === 'paid' ? calculateMemberAmount(memberObj) : Number(existing?.amount) || 0;
+
+    setSaving(true);
+    try {
+      await togglePaymentStatus({
+        groupId,
+        groupName,
+        memberId: targetMemberId,
+        memberName: finalMemberName,
+        month: currentMonth,
+        amount: finalAmount,
+        status,
+        method: status === 'paid' ? method : 'none',
+        remarks: status === 'paid' ? remarks.trim() : '',
+        currentTotalPaid: memberObj.totalPaid || 0,
+        monthlyAmount: monthlyAmt
+      });
+      setShowIntake(false);
+      setSelectedMember(null);
+    } catch (e) {
+      Alert.alert('Could not save', 'The payment was not recorded. Check your connection and try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const renderPaymentRow = ({ item, index }) => {
@@ -192,7 +213,7 @@ export default function PaymentScreen({ route, navigation }) {
             style={({ pressed }) => [
               styles.statusCircle, 
               isPaid ? styles.statusCirclePaid : styles.statusCirclePending,
-              pressed && { scale: 0.95 }
+              pressed && { transform: [{ scale: 0.95 }] }
             ]}
             onPress={() => openIntake(item)}
           >
@@ -303,7 +324,9 @@ export default function PaymentScreen({ route, navigation }) {
 
             <View style={styles.modalActions}>
               <Pressable style={styles.cancelBtn} onPress={() => setShowIntake(false)}><Text style={styles.cancelText}>CANCEL</Text></Pressable>
-              <Pressable style={styles.confirmBtn} onPress={() => handleConfirm()}><Text style={styles.confirmText}>CONFIRM PAID</Text></Pressable>
+              <Pressable style={[styles.confirmBtn, saving && { opacity: 0.6 }]} onPress={() => handleConfirm()} disabled={saving}>
+                {saving ? <ActivityIndicator size="small" color={colors.white} /> : <Text style={styles.confirmText}>CONFIRM PAID</Text>}
+              </Pressable>
             </View>
           </View>
         </KeyboardAvoidingView>

@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { StyleSheet, Text, View, Pressable, Platform, Animated, Image, StatusBar } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { APP_VERSION } from '../utils/version';
 import { colors, spacing, radius, normalize, window, layout } from '../utils/theme';
 
 export default function WelcomeScreen({ navigation }) {
@@ -43,7 +44,7 @@ export default function WelcomeScreen({ navigation }) {
           <View style={styles.logoWrap}>
             <Image source={require('../assets/icon.png')} style={styles.logo} />
           </View>
-          <Text style={styles.version}>VERSION 1.0.2</Text>
+          <Text style={styles.version}>VERSION {APP_VERSION}</Text>
           <View style={styles.brandContainer}>
             <Text style={styles.titleHeavy}>Chit</Text>
             <Text style={styles.titleLight}>Flow</Text>
