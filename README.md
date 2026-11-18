@@ -4,6 +4,16 @@ ChitFlow is a mobile app that helps a chit fund organizer run monthly savings ci
 
 Current version: **1.1.0**
 
+## Bring your own Firebase keys
+
+ChitFlow is open source and ships **without any Firebase keys**. Everything the app saves goes into a Firebase project that you own, so the project cannot work until you add your own configuration.
+
+* Without keys, the app opens a friendly setup screen that lists the steps instead of crashing.
+* Your keys live in a local `.env` file that git ignores, so they are never committed.
+* The APK attached to a GitHub release is built without any keys, so it opens on the setup screen. To get a working app, build it yourself with your own keys (see Building an installable Android app below).
+
+Full instructions are in Getting started.
+
 ## Why this project exists
 
 A chit fund is a traditional savings and credit scheme common in India. A fixed number of people each pay a fixed amount every month. Every month one member receives the whole pot, decided by an auction where the lowest bidder discount wins. The discount is shared back to everyone as a dividend, and the organizer keeps a commission.
@@ -151,7 +161,14 @@ npm install --legacy-peer-deps
 cp .env.example .env
 ```
 
-Open `.env` and paste the values from Firebase project settings, under your web app configuration. The names are already listed in `.env.example`.
+Set up your own Firebase project:
+
+1. Go to the Firebase console and create a project.
+2. Add a Web app to the project. Firebase then shows a configuration object with values such as apiKey and projectId.
+3. Open Build, then Firestore Database, and create a database.
+4. Open `.env` and paste each value next to its matching name from `.env.example`.
+
+Your Firestore security rules decide who can read and write your data. While experimenting you can use test mode, but write proper rules before you put real data in.
 
 Create the Firestore index that the members query needs. Either deploy `firestore.indexes.json` with the Firebase CLI, or run the app once and follow the link that Firestore prints in the console the first time the members list is opened.
 

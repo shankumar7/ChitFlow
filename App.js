@@ -20,6 +20,8 @@ import MemberListScreen from './screens/MemberListScreen';
 import AddMemberScreen from './screens/AddMemberScreen';
 import PaymentScreen from './screens/PaymentScreen';
 import AuctionScreen from './screens/AuctionScreen';
+import SetupRequiredScreen from './screens/SetupRequiredScreen';
+import { isFirebaseConfigured } from './services/firebase';
 import { checkForUpdateOnLaunch, skipVersion } from './services/updateService';
 import { colors, normalize } from './utils/theme';
 
@@ -120,6 +122,15 @@ export default function App() {
       setLoading(false);
     }
   };
+
+  if (!isFirebaseConfigured) {
+    return (
+      <SafeAreaProvider>
+        <ExpoStatusBar style="dark" />
+        <SetupRequiredScreen />
+      </SafeAreaProvider>
+    );
+  }
 
   if (loading) {
     return (

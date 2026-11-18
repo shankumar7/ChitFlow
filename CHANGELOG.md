@@ -2,6 +2,11 @@
 
 All notable changes to ChitFlow are recorded here. The format follows Keep a Changelog and the project uses semantic versioning.
 
+## [Unreleased]
+
+### Added
+* A setup screen that appears when no Firebase keys are configured, so a fresh clone or a keyless APK explains what to do instead of failing.
+
 ## [1.1.0] 18 November 2026
 
 ### Added

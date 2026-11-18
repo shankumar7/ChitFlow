@@ -12,13 +12,17 @@ const firebaseConfig = {
   measurementId: process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID
 };
 
-// Fail loudly in development when the .env file is missing, instead of a silent blank app.
-if (!firebaseConfig.projectId || !firebaseConfig.apiKey) {
+// True only when the developer has supplied their own Firebase project values in .env.
+export const isFirebaseConfigured = Boolean(firebaseConfig.projectId && firebaseConfig.apiKey);
+
+if (!isFirebaseConfigured) {
   console.warn(
-    'ChitFlow: Firebase configuration is missing. Copy .env.example to .env and fill in your Firebase project values.'
+    'ChitFlow: Firebase configuration is missing. Copy .env.example to .env and fill in your own Firebase project values.'
   );
 }
 
-// Initialize Firebase
-const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+// Placeholder values keep the app importable so it can show a setup screen instead of crashing.
+const app = getApps().length
+  ? getApps()[0]
+  : initializeApp(isFirebaseConfigured ? firebaseConfig : { apiKey: 'not-configured', projectId: 'not-configured', appId: 'not-configured' });
 export const db = getFirestore(app);
