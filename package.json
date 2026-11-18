@@ -1,6 +1,6 @@
 {
   "name": "chitflow",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "main": "index.js",
   "scripts": {
     "start": "expo start",
@@ -22,7 +22,6 @@
     "expo-navigation-bar": "~4.0.9",
     "expo-status-bar": "~2.0.1",
     "expo-system-ui": "~4.0.9",
-    "expo-updates": "~0.27.5",
     "firebase": "^12.13.0",
     "react": "18.3.1",
     "react-native": "0.76.9",
@@ -35,5 +34,10 @@
     "@babel/core": "^7.25.2",
     "babel-preset-expo": "~12.0.0"
   },
-  "private": true
+  "private": true,
+  "description": "ChitFlow: a mobile manager for chit fund groups, built with Expo, React Native and Firebase.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/shankumar7/ChitFlow.git"
+  }
 }
