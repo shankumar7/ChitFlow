@@ -6,6 +6,16 @@ on:
   push:
     tags:
       - 'v*'
+  # Lets you publish from the Actions tab without pushing a tag by hand.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Version tag to publish, for example v1.1.0'
+        required: true
+        default: 'v1.1.0'
+
+env:
+  TAG: ${{ github.event.inputs.tag || github.ref_name }}
 
 permissions:
   contents: write
@@ -18,24 +28,24 @@ jobs:
 
       - name: Extract release notes from CHANGELOG.md
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
+          VERSION="${TAG#v}"
           awk -v v="$VERSION" '
             $0 ~ "^## \\[" v "\\]" { found=1; next }
             found && /^## \[/ { exit }
             found { print }
           ' CHANGELOG.md > RELEASE_NOTES.md
           if [ ! -s RELEASE_NOTES.md ]; then
-            echo "Release ${GITHUB_REF_NAME}" > RELEASE_NOTES.md
+            echo "Release ${TAG}" > RELEASE_NOTES.md
           fi
 
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "$GITHUB_REF_NAME" \
-            --title "ChitFlow ${GITHUB_REF_NAME}" \
-            --notes-file RELEASE_NOTES.md \
-            --verify-tag
+          gh release create "$TAG" \
+            --target "${{ github.sha }}" \
+            --title "ChitFlow ${TAG}" \
+            --notes-file RELEASE_NOTES.md
 
   # Optional: attaches an Android APK built with EAS. It only runs when an EXPO_TOKEN
   # repository secret exists, so the release above works without it.
@@ -60,9 +70,9 @@ jobs:
         run: |
           npx eas-cli build --platform android --profile preview --non-interactive --wait --json > build.json
           node -e "const b=JSON.parse(require('fs').readFileSync('build.json','utf8'));console.log(b[0].artifacts.buildUrl)" > apk_url.txt
-          curl -L "$(cat apk_url.txt)" -o "ChitFlow-${GITHUB_REF_NAME}.apk"
+          curl -L "$(cat apk_url.txt)" -o "ChitFlow-${TAG}.apk"
       - name: Attach APK to the release
         if: env.EXPO_TOKEN != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload "$GITHUB_REF_NAME" "ChitFlow-${GITHUB_REF_NAME}.apk"
+        run: gh release upload "$TAG" "ChitFlow-${TAG}.apk"
