@@ -32,6 +32,7 @@ export default function AuctionScreen({ route, navigation }) {
   const [bidAmount, setBidAmount] = useState('');
   const [selectedMember, setSelectedMember] = useState(null);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const safeTop = insets.top || StatusBar.currentHeight || 30;
@@ -72,6 +73,7 @@ export default function AuctionScreen({ route, navigation }) {
   const calculations = useMemo(() => {
     if (!bidAmount || isNaN(bidAmount) || !chitValue || members.length === 0) return null;
     const bid = parseFloat(bidAmount);
+    if (bid <= 0 || bid > chitValue) return null;
     const totalDiscount = chitValue - bid;
     const commission = parseFloat(commissionPercentage || 5);
     const organizerCommission = (chitValue * commission) / 100;
@@ -93,8 +95,9 @@ export default function AuctionScreen({ route, navigation }) {
       return;
     }
 
+    if (saving) return;
     try {
-      setLoading(true);
+      setSaving(true);
       await recordLifting({
         groupId,
         memberId: selectedMember.id,
@@ -113,7 +116,7 @@ export default function AuctionScreen({ route, navigation }) {
     } catch (e) {
       Alert.alert("Error", e.message);
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
@@ -206,6 +209,9 @@ export default function AuctionScreen({ route, navigation }) {
                 onChangeText={setBidAmount}
               />
               <Text style={styles.inputHint}>Total Chit Value: ₹ {chitValue ? chitValue.toLocaleString() : 'N/A'}</Text>
+              {!!bidAmount && !calculations && !!chitValue && (
+                <Text style={[styles.inputHint, { color: '#EF4444' }]}>The bid must be greater than 0 and not more than the chit value.</Text>
+              )}
             </View>
 
             {calculations && (
@@ -264,8 +270,8 @@ export default function AuctionScreen({ route, navigation }) {
               <Pressable style={styles.cancelBtn} onPress={() => setShowConfirm(false)}>
                 <Text style={styles.cancelText}>CANCEL</Text>
               </Pressable>
-              <Pressable style={styles.confirmBtn} onPress={handleRecord}>
-                <Text style={styles.confirmText}>APPROVE</Text>
+              <Pressable style={[styles.confirmBtn, saving && { opacity: 0.6 }]} onPress={handleRecord} disabled={saving}>
+                {saving ? <ActivityIndicator size="small" color={colors.white} /> : <Text style={styles.confirmText}>APPROVE</Text>}
               </Pressable>
             </View>
           </View>
