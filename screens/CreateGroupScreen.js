@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { createGroup } from '../services/groupService';
 import { createBatchMembers } from '../services/memberService';
+import { isValidDateString } from '../utils/date';
 import { colors, spacing, radius, normalize, layout } from '../utils/theme';
 
 export default function CreateGroupScreen({ navigation }) {
@@ -34,33 +35,46 @@ export default function CreateGroupScreen({ navigation }) {
   const safeTop = insets.top || StatusBar.currentHeight || 30;
 
   const handleCreate = async () => {
-    if (!name || !monthlyAmount || !duration || !startDate) {
+    if (!name.trim() || !monthlyAmount || !duration || !startDate) {
       Alert.alert("Incomplete", "Please define all group parameters, including the start date.");
       return;
     }
 
-    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!dateRegex.test(startDate)) {
-      Alert.alert("Invalid Date", "Please use the format YYYY-MM-DD (e.g. 2026-05-01)");
+    if (!isValidDateString(startDate)) {
+      Alert.alert("Invalid Date", "Please enter a real date in the format YYYY-MM-DD (e.g. 2026-05-01).");
+      return;
+    }
+    const amountNum = parseFloat(monthlyAmount);
+    const durationNum = parseInt(duration, 10);
+    const commissionNum = parseFloat(commissionPercentage || '0');
+    if (!(amountNum > 0)) {
+      Alert.alert("Invalid Amount", "The monthly amount must be greater than zero.");
+      return;
+    }
+    if (!Number.isInteger(durationNum) || durationNum < 2 || durationNum > 12) {
+      Alert.alert("Invalid Duration", "Duration must be a whole number between 2 and 12 months.");
+      return;
+    }
+    if (Number.isNaN(commissionNum) || commissionNum < 0 || commissionNum > 100) {
+      Alert.alert("Invalid Commission", "Commission must be between 0 and 100 percent.");
       return;
     }
 
     setLoading(true);
     try {
       const groupDoc = await createGroup({
-        name,
-        monthlyAmount: parseFloat(monthlyAmount),
-        duration: parseInt(duration),
-        commissionPercentage: parseFloat(commissionPercentage),
+        name: name.trim(),
+        monthlyAmount: amountNum,
+        duration: durationNum,
+        commissionPercentage: commissionNum,
         chitValue,
         startDate,
         status: 'active',
-        createdAt: new Date(),
         syncMembersToDuration: syncMembers
       });
 
       if (syncMembers) {
-        await createBatchMembers(groupDoc.id, parseInt(duration));
+        await createBatchMembers(groupDoc.id, durationNum);
       }
 
       Alert.alert("Initialized", "The Chitti circle and placeholders have been successfully established.");
@@ -176,12 +190,12 @@ export default function CreateGroupScreen({ navigation }) {
                 <Text style={styles.previewLabel}>ESTIMATED CHIT VALUE</Text>
                 <Text style={styles.previewValue}>₹ {chitValue.toLocaleString()}</Text>
               </View>
-              {syncMembers && duration && (
+              {syncMembers && !!duration ? (
                 <View style={[styles.previewItem, { marginTop: 12 }]}>
                   <Text style={styles.previewLabel}>REQUIRED MEMBERS</Text>
                   <Text style={styles.previewValue}>{duration} PARTICIPANTS</Text>
                 </View>
-              )}
+              ) : null}
             </View>
 
             <Pressable 

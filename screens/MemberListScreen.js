@@ -23,7 +23,7 @@ const MemberCard = ({ member, index, opacity, onEdit }) => {
     }
   };
 
-  const isPlaceholder = member.name.startsWith('Member ') && !member.phone;
+  const isPlaceholder = (member.name || '').startsWith('Member ') && !member.phone;
 
   return (
     <Animated.View style={[styles.memberCard, {
@@ -164,7 +164,14 @@ export default function MemberListScreen({ route, navigation }) {
         )}
       </ScrollView>
 
-
+      <Pressable
+        style={({ pressed }) => [styles.fab, pressed && { transform: [{ scale: 0.95 }] }]}
+        onPress={() => navigation.navigate('AddMember', { groupId })}
+        accessibilityRole="button"
+        accessibilityLabel="Add member"
+      >
+        <MaterialCommunityIcons name="account-plus" size={28} color={colors.white} />
+      </Pressable>
     </View>
   );
 }
@@ -209,7 +216,7 @@ const styles = StyleSheet.create({
   fab: {
     position: 'absolute',
     right: spacing.xl,
-    bottom: 80, // Positioned higher as requested to distinguish from global FAB
+    bottom: 32,
     width: 64,
     height: 64,
     borderRadius: 32,
