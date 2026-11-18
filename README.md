@@ -1,4 +1,16 @@
-# ChitFlow
+<p align="center">
+  <img src="assets/icon.png" alt="ChitFlow logo" width="160" />
+</p>
+
+<h1 align="center">ChitFlow</h1>
+
+<p align="center">
+  Run chit fund groups from your phone: members, auctions, installments and a full payment ledger.
+</p>
+
+<p align="center">
+  <a href="https://github.com/shankumar7/ChitFlow/releases/latest">Latest release</a> · <a href="CHANGELOG.md">Changelog</a> · <a href="#getting-started">Getting started</a>
+</p>
 
 ChitFlow is a mobile app that helps a chit fund organizer run monthly savings circles (called chitti or chit groups) from a phone. It tracks groups, members, monthly installments, auctions (liftings), dividends and a full payment ledger, and keeps everything synchronized in realtime through Firebase.
 
