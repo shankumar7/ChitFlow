@@ -21,3 +21,10 @@ android/
 *.p12
 *.key
 *.mobileprovision
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Local logs
+*.log
