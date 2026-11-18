@@ -9,9 +9,9 @@ import {
   setDoc,
   where,
   getCountFromServer,
+  writeBatch,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { updateMember } from './memberService';
 import { getCurrentMonthNumber } from '../utils/date';
 
 const paymentsRef = collection(db, 'home', 'chitflow', 'payments');
@@ -22,8 +22,18 @@ const togglePaymentStatus = async ({ groupId, memberId, month, amount, status, m
   const docId = getPaymentId({ groupId, memberId, monthNumber: month });
   const timestamp = new Date().toISOString();
   const currentMonth = getCurrentMonthNumber();
+  const safeAmount = Number(amount) || 0;
 
-  await setDoc(
+  const newTotalPaid = Math.max(
+    0,
+    status === 'paid' ? currentTotalPaid + safeAmount : currentTotalPaid - safeAmount
+  );
+  const totalDueTillNow = currentMonth * (Number(monthlyAmount) || 0);
+  const newPendingAmount = Math.max(0, totalDueTillNow - newTotalPaid);
+
+  // Write the payment and the member totals together so they can never drift apart.
+  const batch = writeBatch(db);
+  batch.set(
     doc(db, 'home', 'chitflow', 'payments', docId),
     {
       groupId,
@@ -31,7 +41,7 @@ const togglePaymentStatus = async ({ groupId, memberId, month, amount, status, m
       memberName,
       groupName,
       monthNumber: month,
-      amount,
+      amount: safeAmount,
       status,
       method: method || 'none',
       remarks: remarks || '',
@@ -40,15 +50,11 @@ const togglePaymentStatus = async ({ groupId, memberId, month, amount, status, m
     },
     { merge: true }
   );
-
-  const newTotalPaid = status === 'paid' ? (currentTotalPaid + Number(amount)) : (currentTotalPaid - Number(amount));
-  const totalDueTillNow = currentMonth * monthlyAmount;
-  const newPendingAmount = Math.max(0, totalDueTillNow - newTotalPaid);
-
-  await updateMember(memberId, {
+  batch.update(doc(db, 'home', 'chitflow', 'members', memberId), {
     totalPaid: newTotalPaid,
-    pendingAmount: newPendingAmount
+    pendingAmount: newPendingAmount,
   });
+  await batch.commit();
 
   return true;
 };

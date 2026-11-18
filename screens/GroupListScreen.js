@@ -13,17 +13,11 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { subscribeGroups } from '../services/groupService';
+import { calculateEndDate } from '../utils/date';
 import { colors, spacing, radius, normalize, layout } from '../utils/theme';
 
-const calculateEndDate = (startDateStr, durationMonths) => {
-  if (!startDateStr) return 'N/A';
-  const start = new Date(startDateStr);
-  const end = new Date(start.setMonth(start.getMonth() + durationMonths));
-  return end.toISOString().split('T')[0];
-};
-
 const GroupCard = ({ group, onPress, opacity, index }) => {
-  const endDate = calculateEndDate(group.startDate, group.duration);
+  const endDate = calculateEndDate(group.startDate, group.duration) || 'N/A';
   const isActive = group.status === 'active';
   
   return (

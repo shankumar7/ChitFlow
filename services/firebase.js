@@ -12,6 +12,13 @@ const firebaseConfig = {
   measurementId: process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID
 };
 
+// Fail loudly in development when the .env file is missing, instead of a silent blank app.
+if (!firebaseConfig.projectId || !firebaseConfig.apiKey) {
+  console.warn(
+    'ChitFlow: Firebase configuration is missing. Copy .env.example to .env and fill in your Firebase project values.'
+  );
+}
+
 // Initialize Firebase
 const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 export const db = getFirestore(app);
