@@ -42,10 +42,14 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "$TAG" \
-            --target "${{ github.sha }}" \
-            --title "ChitFlow ${TAG}" \
-            --notes-file RELEASE_NOTES.md
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "Release $TAG already exists, skipping creation."
+          else
+            gh release create "$TAG" \
+              --target "${{ github.sha }}" \
+              --title "ChitFlow ${TAG}" \
+              --notes-file RELEASE_NOTES.md
+          fi
 
   # Optional: attaches an Android APK built with EAS. It only runs when an EXPO_TOKEN
   # repository secret exists, so the release above works without it.
@@ -75,4 +79,4 @@ jobs:
         if: env.EXPO_TOKEN != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload "$TAG" "ChitFlow-${TAG}.apk"
+        run: gh release upload "$TAG" "ChitFlow-${TAG}.apk" --clobber
